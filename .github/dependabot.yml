@@ -1,0 +1,122 @@
+version: 2
+updates:
+  # Backend NPM dependencies configuration
+  - package-ecosystem: "npm"
+    directory: "/src/backend"
+    schedule:
+      interval: "daily"
+      time: "02:00"
+      timezone: "UTC"
+    target-branch: "develop"
+    labels:
+      - "dependencies"
+      - "backend"
+    assignees:
+      - "@CODEOWNERS"
+    reviewers:
+      - "@CODEOWNERS"
+    commit-message:
+      prefix: "chore(deps)"
+      prefix-development: "chore(deps-dev)"
+      include: "scope"
+    groups:
+      typescript-packages:
+        patterns:
+          - "*typescript*"
+          - "@types/*"
+        update-types:
+          - "major"
+          - "minor"
+          - "patch"
+      testing-packages:
+        patterns:
+          - "jest*"
+          - "@testing-library/*"
+        update-types:
+          - "major"
+          - "minor"
+          - "patch"
+    ignore:
+      - dependency-name: "typescript"
+        versions: [">=6.0.0"]
+    versioning-strategy: "auto"
+
+  # Frontend NPM dependencies configuration
+  - package-ecosystem: "npm"
+    directory: "/src/web"
+    schedule:
+      interval: "daily"
+      time: "02:00"
+      timezone: "UTC"
+    target-branch: "develop"
+    labels:
+      - "dependencies"
+      - "frontend"
+    assignees:
+      - "@CODEOWNERS"
+    reviewers:
+      - "@CODEOWNERS"
+    commit-message:
+      prefix: "chore(deps)"
+      prefix-development: "chore(deps-dev)"
+      include: "scope"
+    groups:
+      react-packages:
+        patterns:
+          - "react*"
+          - "@types/react*"
+        update-types:
+          - "major"
+          - "minor"
+          - "patch"
+      mui-packages:
+        patterns:
+          - "@mui/*"
+        update-types:
+          - "major"
+          - "minor"
+          - "patch"
+    ignore:
+      - dependency-name: "typescript"
+        versions: [">=6.0.0"]
+    versioning-strategy: "auto"
+
+  # Docker dependencies configuration
+  - package-ecosystem: "docker"
+    directory: "/infrastructure/docker"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "03:00"
+      timezone: "UTC"
+    target-branch: "develop"
+    labels:
+      - "dependencies"
+      - "docker"
+    assignees:
+      - "@CODEOWNERS"
+    reviewers:
+      - "@CODEOWNERS"
+    commit-message:
+      prefix: "chore(deps)"
+      include: "scope"
+
+  # GitHub Actions dependencies configuration
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "03:00"
+      timezone: "UTC"
+    target-branch: "develop"
+    labels:
+      - "dependencies"
+      - "github-actions"
+    assignees:
+      - "@CODEOWNERS"
+    reviewers:
+      - "@CODEOWNERS"
+    commit-message:
+      prefix: "chore(deps)"
+      include: "scope"
