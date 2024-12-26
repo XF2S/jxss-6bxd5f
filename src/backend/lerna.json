@@ -1,0 +1,46 @@
+{
+  "version": "0.0.1",
+  "npmClient": "npm",
+  "useWorkspaces": true,
+  "packages": [
+    "packages/*",
+    "packages/shared/*"
+  ],
+  "command": {
+    "publish": {
+      "conventionalCommits": true,
+      "message": "chore(release): publish",
+      "registry": "https://registry.npmjs.org"
+    },
+    "bootstrap": {
+      "npmClientArgs": [
+        "--no-package-lock"
+      ]
+    },
+    "version": {
+      "allowBranch": ["main", "develop"],
+      "conventionalCommits": true,
+      "createRelease": "github",
+      "message": "chore(release): %s",
+      "yes": true
+    }
+  },
+  "stream": true,
+  "hoist": true,
+  "ignoreChanges": [
+    "**/*.md",
+    "**/*.test.ts",
+    "**/*.spec.ts",
+    "**/test/**"
+  ],
+  "changelog": {
+    "repo": "enrollment-system",
+    "labels": {
+      "enhancement": ":rocket: New Features",
+      "bug": ":bug: Bug Fixes",
+      "documentation": ":books: Documentation",
+      "internal": ":house: Internal"
+    },
+    "cacheDir": ".changelog"
+  }
+}
