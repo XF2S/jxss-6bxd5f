@@ -1,0 +1,116 @@
+# Grafana Datasources Configuration v9.5.0
+# Defines monitoring data sources for the enrollment system including:
+# - Prometheus for metrics and performance monitoring
+# - Elasticsearch for centralized logging
+# Implements secure authentication and optimized performance settings
+
+apiVersion: 1
+
+# Default datasource is Prometheus for metrics
+deleteDatasources:
+  - name: Prometheus
+  - name: Elasticsearch
+
+datasources:
+  # Prometheus Datasource Configuration
+  - name: Prometheus
+    type: prometheus
+    access: proxy
+    url: http://prometheus:9090
+    isDefault: true
+    version: 1
+    editable: true
+    jsonData:
+      httpMethod: POST
+      manageAlerts: true
+      prometheusType: Prometheus
+      prometheusVersion: 2.40.0
+      timeInterval: "15s"  # Matches scrape interval for real-time updates
+      queryTimeout: "60s"
+      exemplarTraceIdDestinations:
+        - name: trace_id
+          datasourceUid: tempo
+    secureJsonData: {}
+    basicAuth: false
+    withCredentials: false
+    tlsAuth: false
+    tlsAuthWithCACert: false
+    # Performance tuning
+    timescaledb:
+      maxOpenConnections: 100
+      maxIdleConnections: 25
+      connMaxLifetime: 14400  # 4 hours
+    # Health monitoring
+    healthCheck:
+      enabled: true
+      intervalSeconds: 60
+      timeoutSeconds: 30
+      failureThreshold: 3
+
+  # Elasticsearch Datasource Configuration
+  - name: Elasticsearch
+    type: elasticsearch
+    access: proxy
+    url: http://elasticsearch:9200
+    database: "enrollment-system-logs-*"
+    isDefault: false
+    version: 1
+    editable: true
+    jsonData:
+      timeField: "@timestamp"
+      esVersion: "8.x"
+      maxConcurrentShardRequests: 5
+      interval: "Daily"
+      logMessageField: "message"
+      logLevelField: "level"
+      dataLinks: []
+      index: "enrollment-system-logs-*"
+      # Enhanced indexing pattern
+      pattern: "enrollment-system-logs-YYYY.MM.DD"
+      # Performance optimization
+      timeInterval: "10s"
+      queryTimeout: "30s"
+      includeFrozen: false
+    secureJsonData:
+      # Elasticsearch authentication credentials should be injected via environment variables
+      esUsername: "${ES_USERNAME}"
+      esPassword: "${ES_PASSWORD}"
+    basicAuth: true
+    withCredentials: true
+    tlsAuth: true
+    tlsAuthWithCACert: true
+    # Connection pool settings
+    connectionPool:
+      maxIdleConnections: 50
+      maxOpenConnections: 150
+      timeout: 5m
+    # Health monitoring
+    healthCheck:
+      enabled: true
+      intervalSeconds: 60
+      timeoutSeconds: 30
+      failureThreshold: 3
+
+# Global settings for all datasources
+defaultDatasourceSettings:
+  timeout: 30
+  httpVersion: "1.1"
+  keepalive: true
+  maxIdleConns: 100
+  maxIdleConnsPerHost: 100
+  tlsHandshakeTimeout: "10s"
+  expectContinueTimeout: "1s"
+  dialTimeout: "30s"
+
+# Provisioning settings
+apiVersion: 1
+providers:
+  - name: 'Default'
+    orgId: 1
+    folder: ''
+    type: file
+    disableDeletion: true
+    updateIntervalSeconds: 60
+    allowUiUpdates: false
+    options:
+      path: /etc/grafana/provisioning/datasources
