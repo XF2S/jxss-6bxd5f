@@ -1,0 +1,181 @@
+# Notification Service Kubernetes Base Configuration
+# Version: 1.0.0
+# Dependencies:
+# - Node.js 18-alpine
+
+---
+# Deployment configuration for the notification service
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: notification-service
+  labels:
+    app: notification-service
+    component: backend
+    tier: communication
+spec:
+  replicas: 2  # Initial replica count, will be managed by HPA
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1        # Maximum number of pods above desired count
+      maxUnavailable: 0  # Never have less than desired count during updates
+  selector:
+    matchLabels:
+      app: notification-service
+  template:
+    metadata:
+      labels:
+        app: notification-service
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "50051"
+    spec:
+      # Security context for enhanced container security
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        fsGroup: 1000
+      
+      # Ensure pods are distributed across nodes
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: DoNotSchedule
+          labelSelector:
+            matchLabels:
+              app: notification-service
+      
+      containers:
+        - name: notification-service
+          image: notification-service:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 50051
+              name: grpc
+              protocol: TCP
+          
+          # Resource limits and requests
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+            limits:
+              cpu: "500m"
+              memory: "256Mi"
+          
+          # Health checking
+          livenessProbe:
+            tcpSocket:
+              port: 50051
+            initialDelaySeconds: 15
+            periodSeconds: 20
+            timeoutSeconds: 5
+            failureThreshold: 3
+          
+          readinessProbe:
+            tcpSocket:
+              port: 50051
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            timeoutSeconds: 3
+            successThreshold: 1
+            failureThreshold: 3
+          
+          startupProbe:
+            tcpSocket:
+              port: 50051
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            failureThreshold: 30
+          
+          # Environment configuration
+          env:
+            - name: NODE_ENV
+              value: "production"
+          
+          # External configuration and secrets
+          envFrom:
+            - secretRef:
+                name: notification-service-secrets
+            - configMapRef:
+                name: notification-service-config
+
+---
+# Service configuration for internal access
+apiVersion: v1
+kind: Service
+metadata:
+  name: notification-service
+  labels:
+    app: notification-service
+  annotations:
+    service.beta.kubernetes.io/aws-load-balancer-internal: "true"
+    prometheus.io/scrape: "true"
+spec:
+  type: ClusterIP
+  ports:
+    - port: 50051
+      targetPort: 50051
+      protocol: TCP
+      name: grpc
+  selector:
+    app: notification-service
+  sessionAffinity: ClientIP
+  sessionAffinityConfig:
+    clientIP:
+      timeoutSeconds: 10800  # 3 hour session stickiness
+
+---
+# Horizontal Pod Autoscaler configuration
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: notification-service-hpa
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: notification-service
+  minReplicas: 2
+  maxReplicas: 4
+  metrics:
+    # CPU-based scaling
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+    
+    # Memory-based scaling
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: 80
+    
+    # Custom metric for message queue length
+    - type: Pods
+      pods:
+        metric:
+          name: message_queue_length
+        target:
+          type: AverageValue
+          averageValue: 100
+  
+  # Scaling behavior configuration
+  behavior:
+    scaleUp:
+      stabilizationWindowSeconds: 60
+      policies:
+        - type: Pods
+          value: 1
+          periodSeconds: 30
+    scaleDown:
+      stabilizationWindowSeconds: 300
+      policies:
+        - type: Pods
+          value: 1
+          periodSeconds: 60
