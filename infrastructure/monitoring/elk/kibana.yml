@@ -1,0 +1,172 @@
+# Kibana v8.0+ Configuration
+# docker.elastic.co/kibana/kibana:8.0+
+
+#===========================================
+# Server Configuration
+#===========================================
+server:
+  name: kibana
+  host: "${SERVER_HOST}"
+  port: "${SERVER_PORT}"
+  # Enhanced SSL/TLS Configuration
+  ssl:
+    enabled: true
+    certificate: "/etc/kibana/certs/kibana.crt"
+    key: "/etc/kibana/certs/kibana.key"
+    supportedProtocols: ["TLSv1.2", "TLSv1.3"]
+    cipherSuites: [
+      "ECDHE-ECDSA-AES256-GCM-SHA384",
+      "ECDHE-RSA-AES256-GCM-SHA384",
+      "ECDHE-ECDSA-CHACHA20-POLY1305",
+      "ECDHE-RSA-CHACHA20-POLY1305"
+    ]
+
+#===========================================
+# Elasticsearch Connection
+#===========================================
+elasticsearch:
+  hosts: ["${ELASTICSEARCH_HOSTS}"]
+  username: "${ELASTICSEARCH_USERNAME}"
+  password: "${ELASTICSEARCH_PASSWORD}"
+  # Enhanced SSL/TLS Security
+  ssl:
+    certificateAuthorities: ["/etc/kibana/certs/ca.crt"]
+    verificationMode: "certificate"
+    alwaysPresentCertificate: true
+
+#===========================================
+# Monitoring Configuration
+#===========================================
+monitoring:
+  ui:
+    container:
+      elasticsearch:
+        enabled: true
+        # Enhanced container monitoring
+        indices:
+          - pattern: "logs-*"
+          - pattern: "metrics-*"
+          - pattern: "audit-*"
+      logstash:
+        enabled: true
+
+#===========================================
+# Security Configuration (X-Pack)
+#===========================================
+xpack:
+  security:
+    enabled: true
+    encryptionKey: "${ENCRYPTION_KEY}"
+    # Enhanced session management
+    session:
+      idleTimeout: "1h"
+      lifespan: "24h"
+      cleanupInterval: "1h"
+      maxConcurrentSessions: 5
+    audit:
+      enabled: true
+      logLevel: "info"
+      events: ["access", "system", "authentication"]
+      outputs: ["file", "index"]
+  
+  # Enhanced reporting capabilities
+  reporting:
+    enabled: true
+    capture:
+      maxAttempts: 3
+      timeouts:
+        waitForElements: 30000
+        openUrl: 30000
+      loadDelay: 3000
+      networkPolicy:
+        rules: ["allow"]
+    csv:
+      maxSizeBytes: 10485760
+      scroll:
+        duration: "30s"
+        size: 500
+
+#===========================================
+# Logging Configuration
+#===========================================
+logging:
+  appenders:
+    file:
+      type: file
+      fileName: "/var/log/kibana/kibana.log"
+      layout:
+        type: json
+  root:
+    level: "info"
+
+#===========================================
+# Path Configuration
+#===========================================
+path:
+  data: "/var/lib/kibana"
+
+#===========================================
+# Feature Controls
+#===========================================
+features:
+  searchProfiler:
+    enabled: true
+  monitoring:
+    enabled: true
+  securitySolution:
+    enabled: true
+  enterpriseSearch:
+    enabled: false
+
+#===========================================
+# Telemetry Settings
+#===========================================
+telemetry:
+  enabled: false
+  allowChangingOptInStatus: false
+
+#===========================================
+# CORS and Security Headers
+#===========================================
+server.cors:
+  enabled: true
+  allowCredentials: false
+  allowOrigin: ["https://*.enrollment-system.com"]
+  allowHeaders: [
+    "Authorization",
+    "Content-Type",
+    "kbn-version"
+  ]
+
+server.customResponseHeaders:
+  X-Content-Type-Options: "nosniff"
+  X-Frame-Options: "SAMEORIGIN"
+  X-XSS-Protection: "1; mode=block"
+  Strict-Transport-Security: "max-age=31536000; includeSubDomains"
+
+#===========================================
+# Cache Configuration
+#===========================================
+cache:
+  maxAge: "1h"
+  maxSearchResultSize: 100000
+
+#===========================================
+# Status Configuration
+#===========================================
+status:
+  allowAnonymous: false
+  v6ApiFormat: true
+
+#===========================================
+# Map Configuration
+#===========================================
+map:
+  includeElasticMapsService: false
+
+#===========================================
+# SavedObjects Configuration
+#===========================================
+savedObjects:
+  maxImportPayloadBytes: 26214400
+  maxImportExportSize: 10000
