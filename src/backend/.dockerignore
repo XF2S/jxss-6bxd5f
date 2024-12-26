@@ -1,0 +1,148 @@
+# Development Dependencies and Build Artifacts
+node_modules
+dist
+coverage
+.gradle
+build
+target
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+*.egg-info
+*.whl
+.pytest_cache
+.tox
+
+# Version Control
+.git
+.gitignore
+.gitattributes
+
+# IDE and Editor Files
+.idea
+.vscode
+.project
+.classpath
+.settings
+*.sublime-*
+.editorconfig
+
+# Test Files
+**/*.test.*
+**/*.spec.*
+**/test/
+**/tests/
+**/testing/
+**/jest.config.*
+**/pytest.ini
+**/coverage.xml
+.coverage
+
+# Environment and Configuration
+.env*
+.env.local
+.env.*.local
+.env.development
+.env.test
+.env.production
+*.config.js
+*.config.ts
+
+# Documentation
+*.md
+*.rst
+*.txt
+docs/
+README*
+CHANGELOG*
+LICENSE*
+
+# Logs and Debug Files
+**/*.log
+**/debug.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+debug.log
+
+# API Gateway Specific
+*.js.map
+tsconfig.tsbuildinfo
+.eslintcache
+*.tsbuildinfo
+.eslintrc*
+.prettierrc*
+.babelrc*
+
+# Application Service Specific (Java)
+.gradle/
+build/
+*.jar
+.classpath
+.project
+.settings/
+gradle/
+gradlew*
+mvnw*
+*.war
+*.ear
+*.class
+
+# Document Service Specific (Python)
+*.egg-info/
+*.whl
+*.pyo
+__pycache__/
+.pytest_cache/
+*.pyc
+.python-version
+.coverage
+htmlcov/
+.tox/
+.mypy_cache/
+
+# Development Tools
+docker-compose*.yml
+Dockerfile*
+.dockerignore
+*.sh
+*.bat
+*.cmd
+Makefile
+
+# Temporary Files
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# Package Management
+package-lock.json
+yarn.lock
+poetry.lock
+requirements.txt.lock
+
+# Build and CI/CD
+.jenkins*
+.travis*
+.circleci/
+.github/
+.gitlab-ci*
+buildspec.yml
+azure-pipelines.yml
+
+# Monitoring and Profiling
+.nyc_output/
+.instrumented/
+*.heapsnapshot
+*.cpuprofile
+
+# Cache Directories
+.npm
+.yarn
+.pnp.*
+.next
+.nuxt
+.cache
