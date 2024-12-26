@@ -1,0 +1,85 @@
+{
+  "compilerOptions": {
+    // ECMAScript target version
+    "target": "ES2020",
+    
+    // Standard library files to include
+    "lib": [
+      "DOM",
+      "DOM.Iterable",
+      "ESNext"
+    ],
+    
+    // Module system configuration
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "noEmit": true,
+    
+    // React configuration
+    "jsx": "react-jsx",
+    
+    // Type checking and strict mode settings
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true,
+    "skipLibCheck": true,
+    
+    // JavaScript interop settings
+    "allowJs": true,
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "forceConsistentCasingInFileNames": true,
+    
+    // Path aliases for clean imports
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["src/*"],
+      "@components/*": ["src/components/*"],
+      "@pages/*": ["src/pages/*"],
+      "@utils/*": ["src/utils/*"],
+      "@hooks/*": ["src/hooks/*"],
+      "@api/*": ["src/api/*"],
+      "@store/*": ["src/store/*"],
+      "@types/*": ["src/types/*"],
+      "@constants/*": ["src/constants/*"],
+      "@assets/*": ["src/assets/*"],
+      "@styles/*": ["src/styles/*"]
+    },
+    
+    // Type definition files
+    "types": [
+      "vite/client",
+      "jest",
+      "@testing-library/jest-dom"
+    ]
+  },
+  
+  // Files to include in compilation
+  "include": [
+    "src/**/*.ts",
+    "src/**/*.tsx",
+    "src/**/*.js",
+    "src/**/*.jsx",
+    "vite.config.ts",
+    "jest.config.ts"
+  ],
+  
+  // Files to exclude from compilation
+  "exclude": [
+    "node_modules",
+    "dist",
+    "build",
+    "coverage"
+  ],
+  
+  // Project references
+  "references": [
+    {
+      "path": "./tsconfig.node.json"
+    }
+  ]
+}
