@@ -1,0 +1,99 @@
+# Kustomize configuration for production environment
+# Version: kustomize.config.k8s.io/v1beta1
+
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+# Base resources to be customized
+resources:
+  - ../../base/namespace.yaml
+  - ../../base/api-gateway.yaml
+  - ../../base/application-service.yaml
+  - ../../base/auth-service.yaml
+  - ../../base/document-service.yaml
+  - ../../base/notification-service.yaml
+  - ../../base/reporting-service.yaml
+  - ../../base/workflow-service.yaml
+  - ../../base/web.yaml
+
+# Production namespace
+namespace: enrollment-system-prod
+
+# Common labels for all resources
+commonLabels:
+  environment: production
+  app.kubernetes.io/environment: prod
+
+# Production-specific annotations
+commonAnnotations:
+  maintainer: platform-team
+  environment.enrollment-system.io/name: production
+  monitoring.enrollment-system.io/enabled: "true"
+  security.enrollment-system.io/compliance-level: production
+
+# Production patches for all deployments
+patches:
+  - target:
+      kind: Deployment
+      name: ".*"
+    patch: |
+      spec:
+        template:
+          spec:
+            containers:
+            - name: .*
+              resources:
+                requests:
+                  cpu: "500m"
+                  memory: "512Mi"
+                limits:
+                  cpu: "1000m"
+                  memory: "1Gi"
+              securityContext:
+                runAsNonRoot: true
+                readOnlyRootFilesystem: true
+              livenessProbe:
+                httpGet:
+                  path: /health
+                  port: 8080
+                initialDelaySeconds: 30
+                periodSeconds: 10
+              readinessProbe:
+                httpGet:
+                  path: /ready
+                  port: 8080
+                initialDelaySeconds: 15
+                periodSeconds: 5
+
+# Production replica counts for high availability
+replicas:
+  - name: api-gateway
+    count: 4
+  - name: application-service
+    count: 6
+  - name: auth-service
+    count: 4
+  - name: document-service
+    count: 4
+  - name: notification-service
+    count: 3
+  - name: reporting-service
+    count: 3
+  - name: workflow-service
+    count: 4
+  - name: web
+    count: 4
+
+# Production configuration settings
+configMapGenerator:
+  - name: enrollment-system-config
+    behavior: merge
+    literals:
+      - ENVIRONMENT=production
+      - LOG_LEVEL=info
+      - MONITORING_ENABLED=true
+      - TRACING_ENABLED=true
+      - METRICS_ENABLED=true
+      - ALERT_THRESHOLD_CPU=80
+      - ALERT_THRESHOLD_MEMORY=80
+      - MAX_CONCURRENT_REQUESTS=1000
