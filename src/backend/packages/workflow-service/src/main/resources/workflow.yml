@@ -1,0 +1,170 @@
+# Workflow Engine Configuration v1.0
+# Defines comprehensive workflow settings for enrollment application processing
+# Compatible with Spring Boot 3.x
+
+workflow:
+  description: "Enrollment Application Workflow Engine Configuration"
+  version: "1.0"
+  
+  # Thread pool executor configuration for workflow processing
+  executor:
+    core-pool-size: 10
+    max-pool-size: 20
+    queue-capacity: 50
+    thread-name-prefix: "workflow-"
+    keep-alive: "15m"
+    rejection-policy: "CALLER_RUNS"
+
+  # State machine configuration with transitions and timeouts
+  state:
+    # Valid state transitions based on WorkflowState enum
+    transitions:
+      CREATED:
+        - DOCUMENT_VERIFICATION
+        - REJECTED
+      DOCUMENT_VERIFICATION:
+        - ACADEMIC_REVIEW
+        - REJECTED
+      ACADEMIC_REVIEW:
+        - FINAL_REVIEW
+        - REJECTED
+      FINAL_REVIEW:
+        - APPROVED
+        - REJECTED
+      APPROVED:
+        - COMPLETED
+      REJECTED: []
+      COMPLETED: []
+
+    # State timeout configurations
+    timeouts:
+      DOCUMENT_VERIFICATION:
+        duration: "48h"
+        warning-threshold: "80%"
+        escalation-threshold: "90%"
+      ACADEMIC_REVIEW:
+        duration: "72h"
+        warning-threshold: "80%"
+        escalation-threshold: "90%"
+      FINAL_REVIEW:
+        duration: "24h"
+        warning-threshold: "80%"
+        escalation-threshold: "90%"
+      default-action: "NOTIFY_AND_ESCALATE"
+
+    # Automated state transitions
+    auto-transitions:
+      APPROVED:
+        target: "COMPLETED"
+        delay: "24h"
+        conditions:
+          - "all-documents-verified"
+          - "fees-paid"
+        retry:
+          max-attempts: 3
+          backoff:
+            initial: "1s"
+            multiplier: 2
+            max: "1h"
+
+  # Notification configuration
+  notification:
+    channels:
+      - email
+      - in-app
+      - sms
+    templates:
+      state-change: "notification-templates/state-change"
+      timeout-warning: "notification-templates/timeout-warning"
+      completion: "notification-templates/completion"
+      error: "notification-templates/error"
+      reminder: "notification-templates/reminder"
+    batch:
+      size: 100
+      interval: "5m"
+      max-delay: "15m"
+    retry:
+      max-attempts: 5
+      backoff:
+        initial: "1s"
+        multiplier: 2
+        max: "1h"
+      circuit-breaker:
+        failure-threshold: 0.5
+        reset-timeout: "5m"
+
+  # Monitoring and metrics configuration
+  monitoring:
+    metrics:
+      enabled: true
+      tags:
+        - "service:workflow"
+        - "env:${spring.profiles.active}"
+      collection-interval: "15s"
+      retention-period: "30d"
+    
+    tracing:
+      enabled: true
+      sample-rate: 0.1
+      export-batch-size: 100
+      export-timeout: "30s"
+    
+    alerts:
+      timeout-threshold: "90%"
+      error-rate-threshold: 0.01
+      queue-size-threshold: 40
+      processing-time-threshold: "4d"
+      notification-failure-threshold: 0.05
+      channels:
+        - email
+        - slack
+        - pagerduty
+      aggregation-window: "5m"
+    
+    health:
+      probes:
+        liveness: "/actuator/health/liveness"
+        readiness: "/actuator/health/readiness"
+      thresholds:
+        memory: "90%"
+        cpu: "80%"
+        disk: "85%"
+
+  # Validation rules
+  validation:
+    required-documents:
+      - type: "transcript"
+        format: ["pdf", "jpg", "png"]
+        max-size: "10MB"
+      - type: "identification"
+        format: ["pdf", "jpg", "png"]
+        max-size: "5MB"
+      - type: "proof-of-residence"
+        format: ["pdf", "jpg", "png"]
+        max-size: "5MB"
+    
+    state-rules:
+      DOCUMENT_VERIFICATION:
+        required:
+          - "all-documents-uploaded"
+          - "document-format-valid"
+      ACADEMIC_REVIEW:
+        required:
+          - "documents-verified"
+          - "minimum-gpa-met"
+      FINAL_REVIEW:
+        required:
+          - "academic-review-completed"
+          - "background-check-passed"
+
+  # Audit configuration
+  audit:
+    enabled: true
+    include-payload: true
+    retention-period: "7y"
+    sensitive-fields:
+      - "ssn"
+      - "passport-number"
+    storage:
+      type: "database"
+      table: "workflow_audit_log"
