@@ -1,0 +1,39 @@
+{
+  "watch": [
+    "packages/*/src/**/*.ts",
+    "packages/*/src/**/*.js"
+  ],
+  "ignore": [
+    "node_modules",
+    "dist",
+    "coverage",
+    "**/*.test.ts",
+    "**/*.spec.ts",
+    "**/__tests__/**",
+    "**/__mocks__/**"
+  ],
+  "ext": "ts,js,json",
+  "exec": "ts-node",
+  "delay": 1000,
+  "verbose": true,
+  "env": {
+    "NODE_ENV": "development",
+    "TS_NODE_PROJECT": "./tsconfig.json"
+  },
+  "events": {
+    "start": "echo 'Starting development server...'",
+    "restart": "echo 'Restarting due to changes...'",
+    "crash": "echo 'Application crashed - waiting for file changes before restarting...'"
+  },
+  "restartable": "rs",
+  "colours": true,
+  "legacyWatch": false,
+  "signal": "SIGTERM",
+  "stdin": false,
+  "stdout": true,
+  "watchOptions": {
+    "followSymlinks": false,
+    "usePolling": false,
+    "interval": 1000
+  }
+}
