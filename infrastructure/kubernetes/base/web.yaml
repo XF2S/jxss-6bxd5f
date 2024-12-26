@@ -1,0 +1,178 @@
+# Web Application Frontend Kubernetes Configuration
+# Version: 1.0
+# This configuration defines the base deployment, service, and related resources
+# for the React-based web frontend of the Enrollment System
+
+---
+# Deployment configuration for the web frontend
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: web
+  namespace: enrollment-system
+  labels:
+    app: web
+    component: frontend
+    part-of: enrollment-system
+    app.kubernetes.io/name: web
+    app.kubernetes.io/part-of: enrollment-system
+  annotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "80"
+    prometheus.io/path: "/metrics"
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: web
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  template:
+    metadata:
+      labels:
+        app: web
+        component: frontend
+    spec:
+      # Security Context for Pod
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 101  # nginx user
+        runAsGroup: 101
+        fsGroup: 101
+        seccompProfile:
+          type: RuntimeDefault
+      
+      # Pod Anti-Affinity for High Availability
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                - key: app
+                  operator: In
+                  values:
+                  - web
+              topologyKey: kubernetes.io/hostname
+      
+      containers:
+      - name: web
+        image: enrollment-system/web:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 80
+          protocol: TCP
+          name: http
+        
+        # Resource Limits and Requests
+        resources:
+          requests:
+            cpu: 100m
+            memory: 128Mi
+          limits:
+            cpu: 200m
+            memory: 256Mi
+        
+        # Liveness Probe
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 80
+          initialDelaySeconds: 30
+          periodSeconds: 30
+          timeoutSeconds: 10
+          failureThreshold: 3
+        
+        # Readiness Probe
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 80
+          initialDelaySeconds: 15
+          periodSeconds: 10
+        
+        # Container Security Context
+        securityContext:
+          readOnlyRootFilesystem: true
+          runAsNonRoot: true
+          runAsUser: 101
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+
+---
+# Service configuration for the web frontend
+apiVersion: v1
+kind: Service
+metadata:
+  name: web
+  namespace: enrollment-system
+  labels:
+    app: web
+    component: frontend
+    part-of: enrollment-system
+spec:
+  type: ClusterIP
+  ports:
+  - port: 80
+    targetPort: 80
+    protocol: TCP
+    name: http
+  selector:
+    app: web
+
+---
+# Horizontal Pod Autoscaler configuration
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: web
+  namespace: enrollment-system
+  labels:
+    app: web
+    component: frontend
+    part-of: enrollment-system
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: web
+  minReplicas: 2
+  maxReplicas: 10
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 70
+
+---
+# Network Policy configuration
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: web-network-policy
+  namespace: enrollment-system
+  labels:
+    app: web
+    component: frontend
+    part-of: enrollment-system
+spec:
+  podSelector:
+    matchLabels:
+      app: web
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  - ports:
+    - port: 80
+      protocol: TCP
+  egress:
+  - {}  # Allow all outbound traffic (can be restricted based on requirements)
