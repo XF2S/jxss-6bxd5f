@@ -1,0 +1,221 @@
+# Reporting Service Kubernetes Manifest v1.0
+# Implements high availability, performance optimization, and comprehensive monitoring
+# Base image: eclipse-temurin:17-jre-alpine
+
+---
+# Deployment configuration for the reporting service
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: reporting-service
+  labels:
+    app: reporting-service
+    tier: backend
+    version: v1
+  annotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "8085"
+    prometheus.io/path: "/actuator/prometheus"
+spec:
+  replicas: 2  # Minimum replicas for high availability
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0  # Zero downtime deployments
+  selector:
+    matchLabels:
+      app: reporting-service
+  template:
+    metadata:
+      labels:
+        app: reporting-service
+      annotations:
+        checksum/config: "${CONFIG_CHECKSUM}"  # For config change detection
+    spec:
+      securityContext:
+        fsGroup: 1000
+        runAsUser: 1000
+        runAsNonRoot: true
+      containers:
+      - name: reporting-service
+        image: reporting-service:latest
+        imagePullPolicy: Always
+        ports:
+        - name: http
+          containerPort: 8085
+        - name: metrics
+          containerPort: 9090
+        resources:
+          requests:
+            cpu: "500m"
+            memory: "1Gi"
+          limits:
+            cpu: "2000m"
+            memory: "4Gi"
+        env:
+        - name: SPRING_PROFILES_ACTIVE
+          value: "kubernetes"
+        - name: SERVER_PORT
+          value: "8085"
+        - name: JAVA_OPTS
+          value: "-XX:+UseG1GC -XX:MaxGCPauseMillis=200 -XX:+UseStringDeduplication -XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=/tmp"
+        - name: REPORT_CORE_POOL_SIZE
+          value: "4"
+        - name: REPORT_MAX_POOL_SIZE
+          value: "8"
+        livenessProbe:
+          httpGet:
+            path: /actuator/health/liveness
+            port: 8085
+          initialDelaySeconds: 60
+          periodSeconds: 15
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /actuator/health/readiness
+            port: 8085
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 3
+          failureThreshold: 3
+        startupProbe:
+          httpGet:
+            path: /actuator/health
+            port: 8085
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          failureThreshold: 30
+        volumeMounts:
+        - name: report-storage
+          mountPath: /app/reports
+        - name: config
+          mountPath: /app/config
+          readOnly: true
+        - name: tmp
+          mountPath: /tmp
+      volumes:
+      - name: report-storage
+        persistentVolumeClaim:
+          claimName: report-storage-pvc
+      - name: config
+        configMap:
+          name: reporting-config
+      - name: tmp
+        emptyDir: {}
+
+---
+# Service configuration for internal access
+apiVersion: v1
+kind: Service
+metadata:
+  name: reporting-service
+  labels:
+    app: reporting-service
+spec:
+  type: ClusterIP
+  ports:
+  - name: http
+    port: 8085
+    targetPort: 8085
+    protocol: TCP
+  - name: metrics
+    port: 9090
+    targetPort: 9090
+    protocol: TCP
+  selector:
+    app: reporting-service
+
+---
+# Persistent Volume Claim for report storage
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: report-storage-pvc
+spec:
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 50Gi
+  storageClassName: managed-premium
+
+---
+# Horizontal Pod Autoscaler for dynamic scaling
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: reporting-service-hpa
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: reporting-service
+  minReplicas: 2
+  maxReplicas: 8
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 70
+  - type: Resource
+    resource:
+      name: memory
+      target:
+        type: Utilization
+        averageUtilization: 75
+  behavior:
+    scaleUp:
+      stabilizationWindowSeconds: 60
+      policies:
+      - type: Pods
+        value: 2
+        periodSeconds: 60
+    scaleDown:
+      stabilizationWindowSeconds: 300
+      policies:
+      - type: Pods
+        value: 1
+        periodSeconds: 120
+
+---
+# Network Policy for secure communication
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: reporting-service-network-policy
+spec:
+  podSelector:
+    matchLabels:
+      app: reporting-service
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  - from:
+    - podSelector:
+        matchLabels:
+          app: api-gateway
+    ports:
+    - protocol: TCP
+      port: 8085
+    - protocol: TCP
+      port: 9090
+  egress:
+  - to:
+    - podSelector:
+        matchLabels:
+          app: postgresql
+    ports:
+    - protocol: TCP
+      port: 5432
+  - to:
+    - podSelector:
+        matchLabels:
+          app: redis
+    ports:
+    - protocol: TCP
+      port: 6379
