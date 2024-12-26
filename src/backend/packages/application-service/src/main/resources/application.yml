@@ -1,0 +1,131 @@
+# Spring Boot Application Service Configuration v3.1.0
+# Dependencies:
+# - spring-boot-starter:3.1.0
+# - spring-cloud-starter:4.0.0
+# - spring-boot-starter-actuator:3.1.0
+# - spring-boot-starter-data-redis:3.1.0
+
+spring:
+  application:
+    name: application-service
+
+  # PostgreSQL Database Configuration with Connection Pooling
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:enrollment}
+    username: ${DB_USER}
+    password: ${DB_PASSWORD}
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 5
+      idle-timeout: 300000
+      connection-timeout: 20000
+      pool-name: ApplicationHikariPool
+      max-lifetime: 1200000
+      leak-detection-threshold: 60000
+      validation-timeout: 5000
+
+  # JPA/Hibernate Configuration
+  jpa:
+    hibernate:
+      ddl-auto: none
+      naming:
+        physical-strategy: org.hibernate.boot.model.naming.PhysicalNamingStrategyStandardImpl
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: true
+        jdbc:
+          batch_size: 50
+          fetch_size: 100
+        query:
+          timeout_seconds: 30
+        statement_cache:
+          size: 100
+        connection:
+          provider_disables_autocommit: true
+
+  # Redis Cache Configuration
+  cache:
+    type: redis
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      timeout: 2000
+      ttl: 3600
+      pool:
+        max-active: 8
+        max-idle: 8
+        min-idle: 2
+        max-wait: 1000
+
+# Server Configuration
+server:
+  port: 8081
+  compression:
+    enabled: true
+    mime-types: application/json,application/xml,text/html,text/plain
+    min-response-size: 1024
+  tomcat:
+    max-threads: 200
+    min-spare-threads: 20
+    max-connections: 10000
+    connection-timeout: 5000
+    accept-count: 100
+    max-swallow-size: 2MB
+    max-http-form-post-size: 2MB
+
+# Actuator and Monitoring Configuration
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,metrics,prometheus,info,env
+      base-path: /actuator
+  metrics:
+    export:
+      prometheus:
+        enabled: true
+        step: 1m
+    distribution:
+      percentiles-histogram: true
+      sla: 100ms,500ms,1s
+    tags:
+      application: application-service
+  health:
+    show-details: when_authorized
+    probes:
+      enabled: true
+
+# Logging Configuration
+logging:
+  level:
+    root: INFO
+    com.enrollment.application: DEBUG
+    org.springframework: INFO
+    org.hibernate: INFO
+    org.hibernate.SQL: DEBUG
+    org.hibernate.type.descriptor.sql.BasicBinder: TRACE
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+    file: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+  file:
+    name: logs/application-service.log
+    max-size: 10MB
+    max-history: 10
+    total-size-cap: 1GB
+
+# Service Discovery Configuration (Eureka)
+eureka:
+  client:
+    serviceUrl:
+      defaultZone: ${EUREKA_URL:http://localhost:8761/eureka/}
+    register-with-eureka: true
+    fetch-registry: true
+    registry-fetch-interval-seconds: 30
+  instance:
+    preferIpAddress: true
+    leaseRenewalIntervalInSeconds: 30
+    leaseExpirationDurationInSeconds: 90
+    metadata-map:
+      instanceId: ${spring.application.name}:${random.value}
