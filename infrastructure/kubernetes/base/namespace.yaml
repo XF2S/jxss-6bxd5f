@@ -1,0 +1,32 @@
+# Base namespace configuration for the Enrollment System
+# Version: 1.0
+# This configuration establishes the foundational namespace that will be customized
+# per environment (dev/staging/prod) using Kustomize overlays
+
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: enrollment-system
+  labels:
+    # Core identification labels
+    name: enrollment-system
+    app.kubernetes.io/name: enrollment-system
+    app.kubernetes.io/part-of: enrollment-system
+    app.kubernetes.io/managed-by: kustomize
+    environment: base
+    # Security and compliance labels
+    security.compliance/data-classification: restricted
+    # Monitoring labels
+    monitoring/enabled: "true"
+  annotations:
+    # Namespace description and ownership
+    description: "Enrollment System namespace for isolating all related Kubernetes resources"
+    owner: "platform-team"
+    # Security policies
+    security.policy/enforce: "strict"
+    # Backup configuration
+    backup.policy/retention: "30d"
+    # Monitoring configuration
+    monitoring.prometheus/scrape: "true"
+    # Network policies
+    networking.policy/enabled: "true"
