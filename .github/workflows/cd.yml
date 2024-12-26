@@ -1,0 +1,203 @@
+# Continuous Deployment Workflow v1.0.0
+# Implements automated deployment pipeline with enhanced security controls
+# Dependencies:
+# - actions/checkout@v3
+# - aws-actions/configure-aws-credentials@v2 
+# - docker/setup-buildx-action@v2
+# - docker/login-action@v2
+# - docker/build-push-action@v4
+# - hashicorp/setup-terraform@v2
+# - snyk/actions/docker@v1
+# - datadog/agent-setup@v1
+
+name: Continuous Deployment
+
+on:
+  workflow_run:
+    workflows: ["ci"]
+    types:
+      - completed
+  workflow_dispatch:
+
+env:
+  AWS_REGION: us-west-2
+  ECR_REGISTRY: ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com
+  DOCKER_BUILDKIT: 1
+  SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+  DATADOG_API_KEY: ${{ secrets.DATADOG_API_KEY }}
+
+jobs:
+  deploy-dev:
+    name: Deploy to Development
+    runs-on: ubuntu-latest
+    environment: development
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Verify CI security scan results
+        run: |
+          if [[ "${{ github.event.workflow_run.conclusion }}" != "success" ]]; then
+            echo "CI security scans failed - blocking deployment"
+            exit 1
+          fi
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_DEV }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        uses: docker/login-action@v2
+        with:
+          registry: ${{ env.ECR_REGISTRY }}
+
+      - name: Run container vulnerability scan
+        uses: snyk/actions/docker@v1
+        with:
+          image: ${{ env.ECR_REGISTRY }}/api-gateway:${{ github.sha }}
+          args: --severity-threshold=high
+
+      - name: Build and push Docker images
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          file: infrastructure/docker/api-gateway.Dockerfile
+          push: true
+          tags: ${{ env.ECR_REGISTRY }}/api-gateway:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: 1.5.0
+
+      - name: Deploy to ECS Dev
+        run: |
+          cd infrastructure/terraform/environments/dev
+          terraform init
+          terraform apply -auto-approve
+
+      - name: Setup monitoring
+        uses: datadog/agent-setup@v1
+        with:
+          api_key: ${{ env.DATADOG_API_KEY }}
+          environment: development
+
+      - name: Run automated tests
+        run: |
+          ./scripts/run-integration-tests.sh
+          ./scripts/verify-deployment.sh development
+
+  deploy-staging:
+    name: Deploy to Staging
+    needs: deploy-dev
+    runs-on: ubuntu-latest
+    environment: staging
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_STAGING }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Run extended security scans
+        uses: snyk/actions/docker@v1
+        with:
+          image: ${{ env.ECR_REGISTRY }}/api-gateway:${{ github.sha }}
+          args: --severity-threshold=medium
+
+      - name: Deploy to ECS Staging
+        run: |
+          cd infrastructure/terraform/environments/staging
+          terraform init
+          terraform apply -auto-approve
+
+      - name: Setup enhanced monitoring
+        uses: datadog/agent-setup@v1
+        with:
+          api_key: ${{ env.DATADOG_API_KEY }}
+          environment: staging
+          enable_apm: true
+
+      - name: Run integration tests
+        run: |
+          ./scripts/run-integration-tests.sh
+          ./scripts/performance-baseline.sh
+          ./scripts/security-compliance-check.sh
+
+  deploy-prod:
+    name: Deploy to Production
+    needs: deploy-staging
+    runs-on: ubuntu-latest
+    environment: production
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Verify change management approval
+        run: |
+          if [[ -z "${{ secrets.CHANGE_APPROVAL_ID }}" ]]; then
+            echo "Change management approval required"
+            exit 1
+          fi
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_PROD }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Run comprehensive security audit
+        uses: snyk/actions/docker@v1
+        with:
+          image: ${{ env.ECR_REGISTRY }}/api-gateway:${{ github.sha }}
+          args: --severity-threshold=low
+
+      - name: Verify backup completion
+        run: ./scripts/verify-backup-status.sh
+
+      - name: Deploy to ECS Production
+        run: |
+          cd infrastructure/terraform/environments/prod
+          terraform init
+          terraform apply -auto-approve
+
+      - name: Setup production monitoring
+        uses: datadog/agent-setup@v1
+        with:
+          api_key: ${{ env.DATADOG_API_KEY }}
+          environment: production
+          enable_apm: true
+          enable_security_monitoring: true
+
+      - name: Run deployment verification
+        run: |
+          ./scripts/smoke-tests.sh
+          ./scripts/performance-validation.sh
+          ./scripts/security-posture-check.sh
+
+      - name: Notify incident response team
+        if: always()
+        run: |
+          ./scripts/notify-deployment.sh \
+            --environment=production \
+            --status=${{ job.status }} \
+            --version=${{ github.sha }}
+
+      - name: Update deployment documentation
+        if: success()
+        run: |
+          ./scripts/update-deployment-docs.sh \
+            --version=${{ github.sha }} \
+            --environment=production \
+            --timestamp=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
