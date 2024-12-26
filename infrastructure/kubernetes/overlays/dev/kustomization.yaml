@@ -1,0 +1,77 @@
+# Kustomize configuration for development environment
+# Version: kustomize.config.k8s.io/v1beta1
+# Purpose: Development environment customizations with minimal resources and debug settings
+
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+# Base resources to be customized
+resources:
+  - ../../base/namespace.yaml
+  - ../../base/api-gateway.yaml
+  - ../../base/application-service.yaml
+  - ../../base/auth-service.yaml
+  - ../../base/document-service.yaml
+  - ../../base/notification-service.yaml
+  - ../../base/reporting-service.yaml
+  - ../../base/workflow-service.yaml
+  - ../../base/web.yaml
+
+# Development namespace
+namespace: enrollment-system-dev
+
+# Environment-specific labels
+commonLabels:
+  environment: development
+  app.kubernetes.io/environment: dev
+
+# Resource customizations for development environment
+patches:
+  # Development resource limits and environment variables for all deployments
+  - target:
+      kind: Deployment
+      name: ".*"
+    patch:
+      spec:
+        template:
+          spec:
+            containers:
+              - name: ".*"
+                resources:
+                  requests:
+                    cpu: "100m"
+                    memory: "256Mi"
+                  limits:
+                    cpu: "500m"
+                    memory: "512Mi"
+                env:
+                  - name: NODE_ENV
+                    value: development
+                  - name: LOG_LEVEL
+                    value: debug
+
+  # Development autoscaling settings
+  - target:
+      kind: HorizontalPodAutoscaler
+      name: ".*"
+    patch:
+      spec:
+        minReplicas: 1
+        maxReplicas: 3
+
+# Development environment configuration
+configMapGenerator:
+  - name: dev-config
+    literals:
+      - ENVIRONMENT=development
+      - API_TIMEOUT=30s
+      - ENABLE_DEBUG=true
+
+# Development image configurations
+images:
+  - name: api-gateway
+    newName: enrollment-system/api-gateway
+    newTag: dev
+  - name: application-service
+    newName: enrollment-system/application-service
+    newTag: dev
