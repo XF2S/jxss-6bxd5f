@@ -1,0 +1,103 @@
+# Kustomize configuration for staging environment overlay
+# Version: kustomize.config.k8s.io/v1beta1
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+# Reference base configurations
+resources:
+  - ../../base
+
+# Staging-specific namespace
+namespace: enrollment-system-staging
+
+# Prefix all resources with staging-
+namePrefix: staging-
+
+# Common labels for all resources
+commonLabels:
+  environment: staging
+  managed-by: kustomize
+  app.kubernetes.io/environment: staging
+  app.kubernetes.io/part-of: enrollment-system
+
+# Patches for specific deployments
+patches:
+  # API Gateway deployment patches
+  - target:
+      kind: Deployment
+      name: api-gateway
+    patch:
+      spec:
+        replicas: 2  # Fixed capacity for staging
+        template:
+          spec:
+            containers:
+              - name: api-gateway
+                resources:
+                  requests:
+                    cpu: "200m"
+                    memory: "256Mi"
+                  limits:
+                    cpu: "500m"
+                    memory: "512Mi"
+                env:
+                  - name: NODE_ENV
+                    value: staging
+                  - name: LOG_LEVEL
+                    value: debug
+                livenessProbe:
+                  initialDelaySeconds: 30
+                  periodSeconds: 15
+                readinessProbe:
+                  initialDelaySeconds: 20
+                  periodSeconds: 10
+
+  # Application Service deployment patches
+  - target:
+      kind: Deployment
+      name: application-service
+    patch:
+      spec:
+        replicas: 2  # Fixed capacity for staging
+        template:
+          spec:
+            containers:
+              - name: application-service
+                resources:
+                  requests:
+                    cpu: "500m"
+                    memory: "1Gi"
+                  limits:
+                    cpu: "1000m"
+                    memory: "2Gi"
+                env:
+                  - name: SPRING_PROFILES_ACTIVE
+                    value: staging
+                  - name: JAVA_TOOL_OPTIONS
+                    value: "-Xms512m -Xmx1536m"
+                livenessProbe:
+                  initialDelaySeconds: 60
+                  periodSeconds: 20
+                readinessProbe:
+                  initialDelaySeconds: 40
+                  periodSeconds: 15
+
+# ConfigMap generation for staging environment
+configMapGenerator:
+  - name: staging-config
+    literals:
+      - ENVIRONMENT=staging
+      - LOG_LEVEL=debug
+      - ENABLE_DEBUGGING=true
+      - MONITORING_ENABLED=true
+      - TRACING_ENABLED=true
+      - METRICS_SCRAPE_INTERVAL=15s
+
+# Image configuration for staging
+images:
+  - name: api-gateway
+    newName: enrollment-system/api-gateway
+    newTag: staging
+  - name: application-service
+    newName: enrollment-system/application-service
+    newTag: staging
