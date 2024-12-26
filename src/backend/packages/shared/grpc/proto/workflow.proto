@@ -1,0 +1,176 @@
+syntax = "proto3";
+
+package enrollment.workflow;
+
+import "google/protobuf/timestamp.proto";  // v3.0.0
+import "google/protobuf/empty.proto";      // v3.0.0
+import "google/protobuf/field_mask.proto"; // v3.0.0
+import "google/protobuf/wrappers.proto";   // v3.0.0
+import "application.proto";
+
+option go_package = "enrollment/workflow";
+
+// Enumeration of possible workflow states
+enum WorkflowState {
+  WORKFLOW_STATE_UNSPECIFIED = 0;
+  CREATED = 1;
+  DOCUMENT_VERIFICATION = 2;
+  ACADEMIC_REVIEW = 3;
+  FINAL_REVIEW = 4;
+  COMPLETED = 5;
+  WAITLISTED = 6;
+  ENROLLMENT_CONFIRMED = 7;
+  CANCELLED = 8;
+}
+
+// Message representing a workflow instance
+message Workflow {
+  string workflow_id = 1;
+  string application_id = 2;
+  WorkflowState current_state = 3;
+  string updated_by = 4;
+  google.protobuf.Timestamp created_at = 5;
+  google.protobuf.Timestamp updated_at = 6;
+  google.protobuf.Timestamp deadline = 7;
+  google.protobuf.Int32Value priority = 8;
+  RoutingConfig routing_rules = 9;
+  map<string, string> metadata = 10;
+}
+
+// Configuration for automated workflow routing
+message RoutingConfig {
+  map<string, string> routing_assignments = 1;
+  google.protobuf.Int32Value sla_hours = 2;
+  bool auto_transition_enabled = 3;
+}
+
+// Information about a waitlisted application
+message WaitlistEntry {
+  string workflow_id = 1;
+  google.protobuf.Int32Value position = 2;
+  google.protobuf.Timestamp waitlist_date = 3;
+  string category = 4;
+  map<string, string> metadata = 5;
+}
+
+// Performance and operational metrics for workflows
+message WorkflowMetrics {
+  string workflow_id = 1;
+  map<string, Duration> state_durations = 2;
+  google.protobuf.Int32Value transition_count = 3;
+  Duration total_duration = 4;
+  repeated string bottlenecks = 5;
+}
+
+// Duration message for time measurements
+message Duration {
+  int64 seconds = 1;
+  int32 nanos = 2;
+}
+
+// Request to create a new workflow
+message CreateWorkflowRequest {
+  string application_id = 1;
+  google.protobuf.Int32Value priority = 2;
+  RoutingConfig routing_rules = 3;
+  map<string, string> metadata = 4;
+}
+
+// Request to update workflow state
+message UpdateWorkflowStateRequest {
+  string workflow_id = 1;
+  WorkflowState new_state = 2;
+  string updated_by = 3;
+  map<string, string> transition_metadata = 4;
+}
+
+// Request to get workflow details
+message GetWorkflowRequest {
+  string workflow_id = 1;
+}
+
+// Request to get workflow history
+message GetWorkflowHistoryRequest {
+  string workflow_id = 1;
+  google.protobuf.Timestamp start_date = 2;
+  google.protobuf.Timestamp end_date = 3;
+}
+
+// Workflow history entry
+message WorkflowHistoryEntry {
+  string workflow_id = 1;
+  WorkflowState from_state = 2;
+  WorkflowState to_state = 3;
+  string updated_by = 4;
+  google.protobuf.Timestamp timestamp = 5;
+  map<string, string> transition_metadata = 6;
+}
+
+// Response containing workflow history
+message WorkflowHistoryResponse {
+  repeated WorkflowHistoryEntry entries = 1;
+}
+
+// Request to configure workflow routing
+message ConfigureRoutingRequest {
+  string workflow_id = 1;
+  RoutingConfig routing_config = 2;
+}
+
+// Request to manage waitlist
+message ManageWaitlistRequest {
+  string workflow_id = 1;
+  string action = 2; // ADD, REMOVE, UPDATE_POSITION
+  google.protobuf.Int32Value position = 3;
+  string category = 4;
+  map<string, string> metadata = 5;
+}
+
+// Request to get workflow metrics
+message GetWorkflowMetricsRequest {
+  string workflow_id = 1;
+  google.protobuf.Timestamp start_date = 2;
+  google.protobuf.Timestamp end_date = 3;
+}
+
+// Request for batch workflow updates
+message BatchUpdateWorkflowsRequest {
+  repeated string workflow_ids = 1;
+  WorkflowState new_state = 2;
+  string updated_by = 3;
+  map<string, string> transition_metadata = 4;
+}
+
+// Response for batch workflow updates
+message BatchUpdateWorkflowsResponse {
+  map<string, bool> results = 1;
+  repeated string failed_workflows = 2;
+  repeated string error_messages = 3;
+}
+
+// Service for managing enrollment workflows
+service WorkflowService {
+  // Creates a new workflow instance
+  rpc CreateWorkflow(CreateWorkflowRequest) returns (Workflow) {}
+
+  // Updates workflow state with validation
+  rpc UpdateWorkflowState(UpdateWorkflowStateRequest) returns (Workflow) {}
+
+  // Retrieves workflow details
+  rpc GetWorkflow(GetWorkflowRequest) returns (Workflow) {}
+
+  // Retrieves workflow state history
+  rpc GetWorkflowHistory(GetWorkflowHistoryRequest) returns (WorkflowHistoryResponse) {}
+
+  // Configures workflow routing rules
+  rpc ConfigureRouting(ConfigureRoutingRequest) returns (Workflow) {}
+
+  // Manages waitlist operations
+  rpc ManageWaitlist(ManageWaitlistRequest) returns (WaitlistEntry) {}
+
+  // Retrieves workflow performance metrics
+  rpc GetWorkflowMetrics(GetWorkflowMetricsRequest) returns (WorkflowMetrics) {}
+
+  // Performs batch workflow state updates
+  rpc BatchUpdateWorkflows(BatchUpdateWorkflowsRequest) returns (BatchUpdateWorkflowsResponse) {}
+}
