@@ -1,0 +1,140 @@
+syntax = "proto3";
+
+package auth;
+
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/wrappers.proto";
+
+option go_package = "./auth";
+option java_multiple_files = true;
+
+// Authentication service providing secure user authentication and token management
+service AuthService {
+  // Authenticates user credentials with MFA support
+  rpc Login(LoginRequest) returns (LoginResponse);
+  
+  // Refreshes access token using valid refresh token
+  rpc RefreshToken(RefreshTokenRequest) returns (RefreshTokenResponse);
+  
+  // Securely logs out user and invalidates tokens
+  rpc Logout(LogoutRequest) returns (LogoutResponse);
+  
+  // Verifies token validity and authorization claims
+  rpc VerifyToken(VerifyTokenRequest) returns (VerifyTokenResponse);
+}
+
+// User roles enum matching the TypeScript definition
+enum Role {
+  ROLE_UNSPECIFIED = 0;
+  SUPER_ADMIN = 1;
+  ADMIN = 2;
+  STAFF = 3;
+  REVIEWER = 4;
+  APPLICANT = 5;
+}
+
+// Login request with enhanced security features
+message LoginRequest {
+  string email = 1;
+  string password = 2;
+  optional string mfa_code = 3;
+  DeviceInfo device_info = 4;
+}
+
+// Device information for security tracking
+message DeviceInfo {
+  string device_id = 1;
+  string user_agent = 2;
+  string ip_address = 3;
+  google.protobuf.Timestamp login_timestamp = 4;
+}
+
+// Enhanced login response with security metadata
+message LoginResponse {
+  string access_token = 1;
+  string refresh_token = 2;
+  google.protobuf.Timestamp access_token_expires = 3;
+  google.protobuf.Timestamp refresh_token_expires = 4;
+  UserProfile user_profile = 5;
+  bool mfa_required = 6;
+  SessionMetadata session_metadata = 7;
+}
+
+// User profile information
+message UserProfile {
+  string user_id = 1;
+  string email = 2;
+  string first_name = 3;
+  string last_name = 4;
+  repeated Role roles = 5;
+  bool mfa_enabled = 6;
+  google.protobuf.Timestamp last_login = 7;
+}
+
+// Session metadata for security tracking
+message SessionMetadata {
+  string session_id = 1;
+  DeviceInfo device_info = 2;
+  google.protobuf.Timestamp created_at = 3;
+  google.protobuf.Timestamp expires_at = 4;
+}
+
+// Token refresh request
+message RefreshTokenRequest {
+  string refresh_token = 1;
+  DeviceInfo device_info = 2;
+}
+
+// Token refresh response
+message RefreshTokenResponse {
+  string access_token = 1;
+  google.protobuf.Timestamp access_token_expires = 2;
+  optional string refresh_token = 3;
+  optional google.protobuf.Timestamp refresh_token_expires = 4;
+  SessionMetadata session_metadata = 5;
+}
+
+// Logout request with session management
+message LogoutRequest {
+  string access_token = 1;
+  bool logout_all_sessions = 2;
+  DeviceInfo device_info = 3;
+}
+
+// Logout response
+message LogoutResponse {
+  bool success = 1;
+  google.protobuf.Timestamp logout_timestamp = 2;
+  uint32 sessions_terminated = 3;
+}
+
+// Token verification request
+message VerifyTokenRequest {
+  string token = 1;
+  repeated string required_permissions = 2;
+}
+
+// Token verification response with user context
+message VerifyTokenResponse {
+  bool is_valid = 1;
+  UserProfile user_profile = 2;
+  repeated string granted_permissions = 3;
+  TokenMetadata token_metadata = 4;
+}
+
+// Token metadata for verification
+message TokenMetadata {
+  string token_id = 1;
+  google.protobuf.Timestamp issued_at = 2;
+  google.protobuf.Timestamp expires_at = 3;
+  string issuer = 4;
+  repeated string scopes = 5;
+}
+
+// Error details for authentication failures
+message AuthError {
+  string error_code = 1;
+  string message = 2;
+  string detail = 3;
+  google.protobuf.Timestamp timestamp = 4;
+}
