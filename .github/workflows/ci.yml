@@ -1,0 +1,228 @@
+# GitHub Actions CI Workflow v1.0.0
+# Implements comprehensive continuous integration pipeline with security scanning
+# and quality checks for the Enrollment System
+
+name: Continuous Integration
+
+# Trigger on push and pull request events
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+# Environment variables
+env:
+  NODE_ENV: test
+  COVERAGE_THRESHOLD: 80
+  SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+  SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+
+jobs:
+  # Backend Build and Test Job
+  backend-build:
+    name: Backend Build & Test
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [18.x, 20.x]
+    
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      
+      - name: Setup Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'npm'
+          
+      - name: Setup Java
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+          cache: 'maven'
+          
+      - name: Cache Backend Dependencies
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.npm
+            node_modules
+            */*/node_modules
+          key: ${{ runner.os }}-backend-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-backend-
+            
+      - name: Install Backend Dependencies
+        run: |
+          cd src/backend
+          npm ci
+          
+      - name: Lint Backend Code
+        run: |
+          cd src/backend
+          npm run lint
+          
+      - name: Run Backend Tests
+        run: |
+          cd src/backend
+          npm run test:coverage -- --config=jest.config.ts --coverageThreshold=${{ env.COVERAGE_THRESHOLD }}
+          
+      - name: Build Backend Services
+        run: |
+          cd src/backend
+          npm run build
+          
+      - name: Upload Backend Coverage
+        uses: actions/upload-artifact@v3
+        with:
+          name: backend-coverage
+          path: src/backend/coverage
+          
+      - name: Cache Backend Build
+        uses: actions/cache@v3
+        with:
+          path: src/backend/dist
+          key: ${{ runner.os }}-backend-build-${{ github.sha }}
+
+  # Frontend Build and Test Job
+  frontend-build:
+    name: Frontend Build & Test
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [18.x, 20.x]
+    
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+          
+      - name: Setup Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'npm'
+          
+      - name: Cache Frontend Dependencies
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.npm
+            src/web/node_modules
+          key: ${{ runner.os }}-frontend-${{ hashFiles('src/web/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-frontend-
+            
+      - name: Install Frontend Dependencies
+        run: |
+          cd src/web
+          npm ci
+          
+      - name: Lint Frontend Code
+        run: |
+          cd src/web
+          npm run lint
+          
+      - name: Run Frontend Tests
+        run: |
+          cd src/web
+          npm run test:coverage -- --config=jest.config.ts --coverageThreshold=${{ env.COVERAGE_THRESHOLD }}
+          
+      - name: Build Frontend Application
+        run: |
+          cd src/web
+          npm run build
+          
+      - name: Upload Frontend Coverage
+        uses: actions/upload-artifact@v3
+        with:
+          name: frontend-coverage
+          path: src/web/coverage
+          
+      - name: Cache Frontend Build
+        uses: actions/cache@v3
+        with:
+          path: src/web/build
+          key: ${{ runner.os }}-frontend-build-${{ github.sha }}
+
+  # Security Scanning Job
+  security-scan:
+    name: Security Analysis
+    needs: [backend-build, frontend-build]
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+        
+      - name: Setup Python
+        uses: actions/setup-python@v3
+        with:
+          python-version: '3.11'
+          
+      - name: Setup Snyk
+        uses: snyk/actions/setup@v1
+        
+      - name: Run OWASP Dependency Check
+        run: |
+          npm install -g @owasp/dependency-check
+          dependency-check --project "Enrollment System" --scan . --format SARIF --out owasp-report.sarif
+          
+      - name: Run Snyk Security Scan
+        run: |
+          snyk test --all-projects --sarif-file-output=snyk-report.sarif
+        env:
+          SNYK_TOKEN: ${{ env.SNYK_TOKEN }}
+          
+      - name: SonarQube Analysis
+        uses: SonarSource/sonarqube-scan-action@v1
+        with:
+          args: >
+            -Dsonar.projectKey=enrollment-system
+            -Dsonar.sources=.
+            -Dsonar.javascript.lcov.reportPaths=**/coverage/lcov.info
+            -Dsonar.coverage.exclusions=**/*.test.ts,**/*.spec.ts
+        env:
+          SONAR_TOKEN: ${{ env.SONAR_TOKEN }}
+          
+      - name: Run CodeQL Analysis
+        uses: github/codeql-action/analyze@v2
+        with:
+          languages: javascript, typescript, java, python
+          
+      - name: Upload Security Reports
+        uses: actions/upload-artifact@v3
+        with:
+          name: security-reports
+          path: |
+            owasp-report.sarif
+            snyk-report.sarif
+            
+      - name: Check Security Thresholds
+        run: |
+          if [ $(grep -c "critical" owasp-report.sarif) -gt 0 ]; then
+            echo "Critical vulnerabilities found in OWASP scan"
+            exit 1
+          fi
+          if [ $(grep -c "critical" snyk-report.sarif) -gt 0 ]; then
+            echo "Critical vulnerabilities found in Snyk scan"
+            exit 1
+          fi
+          
+      - name: Notify on Security Issues
+        if: failure()
+        uses: actions/github-script@v6
+        with:
+          script: |
+            github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: 'Security Vulnerabilities Detected',
+              body: 'Critical security vulnerabilities were found during the CI scan. Please review the security reports.'
+            })
