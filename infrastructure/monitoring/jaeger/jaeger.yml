@@ -1,0 +1,186 @@
+# Jaeger Configuration v1.45.0
+# Purpose: Distributed tracing configuration for enrollment system microservices
+
+version: 1
+
+# Global environment variables
+env:
+  JAEGER_AGENT_PORT: "6831"
+  JAEGER_COLLECTOR_PORT: "14250"
+  JAEGER_QUERY_PORT: "16686"
+  SAMPLING_RATE: "1.0"
+  MAX_TRACES_PER_SECOND: "1000"
+  SPAN_STORAGE_TTL: "7d"
+
+# Agent configuration for receiving spans
+agent:
+  host_port: "0.0.0.0:6831"
+  tags:
+    environment: production
+    deployment: enrollment-system
+    region: ${AWS_REGION}
+    cluster: ${ECS_CLUSTER_NAME}
+  processors:
+    - batch:
+        timeout: 1s
+        send_batch_size: 100
+    - queued_retry:
+        num_workers: 10
+        queue_size: 1000
+
+# Collector configuration for processing spans
+collector:
+  host_port: "0.0.0.0:14250"
+  grpc: true
+  http_port: 14268
+  zipkin:
+    host_port: 9411
+  num_workers: 50
+  queue_size: 2000
+  tls:
+    enabled: true
+    cert: /etc/jaeger/cert.pem
+    key: /etc/jaeger/key.pem
+  options:
+    log_level: info
+    max_packet_size: 65000
+    health_check_http_port: 14269
+
+# Query service configuration for UI and API
+query:
+  host_port: "0.0.0.0:16686"
+  base_path: /jaeger
+  ui_config:
+    tracking:
+      gaID: UA-000000-0
+    menu:
+      - label: About
+        url: /about
+      - label: Documentation
+        url: /docs
+    dependencies:
+      dagMaxNumServices: 200
+      menuEnabled: true
+  options:
+    query_timeout: 30s
+    lookup_timeout: 10s
+    max_clock_skew_adjustment: 30s
+
+# Sampling configuration
+sampling:
+  type: probabilistic
+  param: 1.0
+  strategies:
+    # API Gateway sampling
+    - service: api-gateway
+      type: probabilistic
+      param: 1.0
+      operationStrategies:
+        - operation: /api/v1/applications
+          type: probabilistic
+          param: 1.0
+        - operation: /api/v1/documents
+          type: probabilistic
+          param: 1.0
+        - operation: /api/v1/workflow
+          type: probabilistic
+          param: 1.0
+
+    # Auth Service sampling
+    - service: auth-service
+      type: probabilistic
+      param: 1.0
+      operationStrategies:
+        - operation: /authenticate
+          type: probabilistic
+          param: 1.0
+        - operation: /validate-token
+          type: probabilistic
+          param: 1.0
+
+    # Application Service sampling
+    - service: application-service
+      type: probabilistic
+      param: 1.0
+      operationStrategies:
+        - operation: /process-application
+          type: probabilistic
+          param: 1.0
+
+    # Document Service sampling
+    - service: document-service
+      type: probabilistic
+      param: 1.0
+      operationStrategies:
+        - operation: /upload
+          type: probabilistic
+          param: 1.0
+        - operation: /verify
+          type: probabilistic
+          param: 1.0
+
+    # Notification Service sampling
+    - service: notification-service
+      type: probabilistic
+      param: 1.0
+
+    # Workflow Service sampling
+    - service: workflow-service
+      type: probabilistic
+      param: 1.0
+
+# Storage configuration using Elasticsearch
+storage:
+  type: elasticsearch
+  options:
+    es:
+      server-urls: http://elasticsearch:9200
+      username: jaeger
+      password: ${JAEGER_ES_PASSWORD}
+      index-prefix: jaeger
+      max-doc-count: 10000
+      max-num-spans: 100000
+      num-shards: 5
+      num-replicas: 1
+      tls:
+        enabled: true
+        skip-host-verify: false
+        ca: /etc/jaeger/es-ca.pem
+      timeout: 30s
+      index-date-separator: "-"
+      index-rollover:
+        enabled: true
+        max-age: 7d
+        max-docs: 1000000
+      bulk:
+        size: 5000000
+        workers: 10
+        flush-interval: 200ms
+
+# Metrics configuration for Prometheus integration
+metrics:
+  backend: prometheus
+  prometheus:
+    server_url: http://prometheus:9090
+    timer_type: histogram
+    buckets: [.005, .01, .025, .05, .1, .25, .5, 1, 2.5, 5, 10]
+
+# Resource limits
+resources:
+  max_memory: 4Gi
+  max_cpu: 2
+  memory_request: 2Gi
+  cpu_request: 1
+
+# Health check configuration
+health_check:
+  http:
+    port: 14269
+  readiness:
+    initial_delay: 5s
+    period: 10s
+    timeout: 5s
+  liveness:
+    initial_delay: 10s
+    period: 30s
+    timeout: 5s
