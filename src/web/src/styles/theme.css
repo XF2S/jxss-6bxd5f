@@ -1,0 +1,203 @@
+/* 
+ * Core Theme Stylesheet
+ * Implements Material Design 3 specifications with light/dark modes
+ * and high contrast support
+ * @version 1.0.0
+ * @requires @material/theme@14.0.0
+ */
+
+@import './variables.css';
+@import '@material/theme/dist/mdc.theme.css';
+
+/* Base Theme Configuration */
+:root {
+  /* Theme transition settings */
+  --theme-transition-duration: var(--animation-duration-base);
+  --theme-transition-properties: background-color, color, border-color, box-shadow;
+  --theme-transition-timing: var(--animation-easing-standard);
+}
+
+/* Global Theme Transitions */
+* {
+  transition: var(--theme-transition-properties) var(--theme-transition-duration) var(--theme-transition-timing);
+}
+
+/* Light Theme (Default) */
+[data-theme='light'] {
+  color-scheme: light;
+  
+  /* Surface colors */
+  --background-color: var(--md-sys-color-background-light);
+  --surface-color: var(--md-sys-color-surface-light);
+  --surface-variant: var(--md-sys-color-surface-variant-light);
+  
+  /* Text colors */
+  --text-primary: var(--md-sys-color-on-surface-light);
+  --text-secondary: var(--md-sys-color-on-surface-variant-light);
+  --text-disabled: color-mix(in srgb, var(--text-primary) 38%);
+  
+  /* Brand colors */
+  --primary-color: var(--md-sys-color-primary-light);
+  --on-primary: var(--md-sys-color-on-primary-light);
+  --primary-container: var(--md-sys-color-primary-container-light);
+  --on-primary-container: var(--md-sys-color-on-primary-container-light);
+  
+  /* Secondary colors */
+  --secondary-color: var(--md-sys-color-secondary-light);
+  --on-secondary: var(--md-sys-color-on-secondary-light);
+  --secondary-container: var(--md-sys-color-secondary-container-light);
+  --on-secondary-container: var(--md-sys-color-on-secondary-container-light);
+  
+  /* Feedback colors */
+  --error-color: var(--md-sys-color-error-light);
+  --on-error: var(--md-sys-color-on-error-light);
+  --success-color: var(--md-sys-color-success-light);
+  --warning-color: var(--md-sys-color-warning-light);
+  
+  /* Interactive elements */
+  --outline-color: var(--md-sys-color-outline-light);
+  --focus-ring-color: var(--md-sys-color-primary-light);
+}
+
+/* Dark Theme */
+[data-theme='dark'] {
+  color-scheme: dark;
+  
+  /* Surface colors */
+  --background-color: var(--md-sys-color-background-dark);
+  --surface-color: var(--md-sys-color-surface-dark);
+  --surface-variant: var(--md-sys-color-surface-variant-dark);
+  
+  /* Text colors */
+  --text-primary: var(--md-sys-color-on-surface-dark);
+  --text-secondary: var(--md-sys-color-on-surface-variant-dark);
+  --text-disabled: color-mix(in srgb, var(--text-primary) 38%);
+  
+  /* Brand colors */
+  --primary-color: var(--md-sys-color-primary-dark);
+  --on-primary: var(--md-sys-color-on-primary-dark);
+  --primary-container: var(--md-sys-color-primary-container-dark);
+  --on-primary-container: var(--md-sys-color-on-primary-container-dark);
+  
+  /* Secondary colors */
+  --secondary-color: var(--md-sys-color-secondary-dark);
+  --on-secondary: var(--md-sys-color-on-secondary-dark);
+  --secondary-container: var(--md-sys-color-secondary-container-dark);
+  --on-secondary-container: var(--md-sys-color-on-secondary-container-dark);
+  
+  /* Feedback colors */
+  --error-color: var(--md-sys-color-error-dark);
+  --on-error: var(--md-sys-color-on-error-dark);
+  --success-color: var(--md-sys-color-success-dark);
+  --warning-color: var(--md-sys-color-warning-dark);
+  
+  /* Interactive elements */
+  --outline-color: var(--md-sys-color-outline-dark);
+  --focus-ring-color: var(--md-sys-color-primary-dark);
+}
+
+/* High Contrast Theme */
+[data-theme='high-contrast'] {
+  color-scheme: light;
+  
+  /* Enhanced contrast colors meeting WCAG 2.1 Level AAA */
+  --background-color: #FFFFFF;
+  --surface-color: #FFFFFF;
+  --surface-variant: #F2F2F2;
+  
+  /* Text colors with enhanced contrast */
+  --text-primary: #000000;
+  --text-secondary: #000000;
+  --text-disabled: #595959;
+  
+  /* High contrast brand colors */
+  --primary-color: #000000;
+  --on-primary: #FFFFFF;
+  --primary-container: #000000;
+  --on-primary-container: #FFFFFF;
+  
+  /* High contrast secondary colors */
+  --secondary-color: #000000;
+  --on-secondary: #FFFFFF;
+  --secondary-container: #000000;
+  --on-secondary-container: #FFFFFF;
+  
+  /* High contrast feedback colors */
+  --error-color: #CC0000;
+  --on-error: #FFFFFF;
+  --success-color: #006600;
+  --warning-color: #CC6600;
+  
+  /* Interactive elements with enhanced visibility */
+  --outline-color: #000000;
+  --focus-ring-color: #0000FF;
+  
+  /* Remove shadows and use borders for clarity */
+  --elevation-1: 0 0 0 3px #000000;
+  --elevation-2: 0 0 0 3px #000000;
+  --elevation-3: 0 0 0 3px #000000;
+  --elevation-4: 0 0 0 3px #000000;
+  --elevation-5: 0 0 0 3px #000000;
+}
+
+/* System Theme Preference Detection */
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme]) {
+    color-scheme: light;
+    --theme-mode: light;
+  }
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) {
+    color-scheme: dark;
+    --theme-mode: dark;
+  }
+}
+
+/* High Contrast Mode Detection */
+@media (prefers-contrast: more) {
+  :root:not([data-theme]) {
+    --theme-mode: high-contrast;
+  }
+}
+
+/* Reduced Motion Support */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    transition: none !important;
+    animation: none !important;
+  }
+}
+
+/* Utility Classes */
+.theme-light {
+  color-scheme: light !important;
+  --theme-mode: light;
+}
+
+.theme-dark {
+  color-scheme: dark !important;
+  --theme-mode: dark;
+}
+
+.theme-high-contrast {
+  color-scheme: light !important;
+  --theme-mode: high-contrast;
+}
+
+/* Focus Styles Meeting WCAG 2.1 Level AA */
+:focus-visible {
+  outline: var(--focus-ring-width) solid var(--focus-ring-color);
+  outline-offset: var(--focus-ring-offset);
+}
+
+/* Touch Target Size Compliance */
+button, 
+[role="button"],
+input[type="submit"],
+input[type="reset"],
+input[type="button"] {
+  min-width: var(--touch-target-size);
+  min-height: var(--touch-target-size);
+}
