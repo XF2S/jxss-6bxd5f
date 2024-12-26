@@ -1,0 +1,135 @@
+syntax = "proto3";
+
+package enrollment.application;
+
+import "google/protobuf/timestamp.proto";  // v3.0.0
+import "google/protobuf/empty.proto";      // v3.0.0
+import "google/protobuf/wrappers.proto";   // v3.0.0
+import "google/protobuf/field_mask.proto"; // v3.0.0
+
+option java_package = "com.enrollment.application.grpc";
+option java_multiple_files = true;
+option go_package = "enrollmentapp/application";
+option validate_all = true;
+
+// Defines possible states of an enrollment application
+enum ApplicationStatus {
+  APPLICATION_STATUS_UNSPECIFIED = 0;
+  DRAFT = 1;
+  SUBMITTED = 2;
+  UNDER_REVIEW = 3;
+  APPROVED = 4;
+  REJECTED = 5;
+}
+
+// Core application data structure
+message Application {
+  string id = 1 [(validate.rules).string = {
+    uuid: true,
+    min_len: 36,
+    max_len: 36
+  }];
+  string user_id = 2 [(validate.rules).string = {
+    uuid: true,
+    min_len: 36,
+    max_len: 36
+  }];
+  ApplicationStatus status = 3;
+  map<string, string> form_data = 4;
+  repeated string document_ids = 5;
+  google.protobuf.Timestamp created_at = 6;
+  google.protobuf.Timestamp updated_at = 7;
+  google.protobuf.Timestamp submitted_at = 8;
+}
+
+// Request to create a new application
+message CreateApplicationRequest {
+  string user_id = 1 [(validate.rules).string = {
+    uuid: true,
+    min_len: 36,
+    max_len: 36
+  }];
+  map<string, string> form_data = 2;
+}
+
+// Request to retrieve an application
+message GetApplicationRequest {
+  string id = 1 [(validate.rules).string = {
+    uuid: true,
+    min_len: 36,
+    max_len: 36
+  }];
+}
+
+// Request to update an existing application
+message UpdateApplicationRequest {
+  string id = 1 [(validate.rules).string = {
+    uuid: true,
+    min_len: 36,
+    max_len: 36
+  }];
+  map<string, string> form_data = 2;
+  google.protobuf.FieldMask update_mask = 3;
+}
+
+// Request to submit an application for review
+message SubmitApplicationRequest {
+  string id = 1 [(validate.rules).string = {
+    uuid: true,
+    min_len: 36,
+    max_len: 36
+  }];
+}
+
+// Request to list user's applications
+message GetUserApplicationsRequest {
+  string user_id = 1 [(validate.rules).string = {
+    uuid: true,
+    min_len: 36,
+    max_len: 36
+  }];
+  optional ApplicationStatus status_filter = 2;
+  int32 page_size = 3 [(validate.rules).int32 = {
+    gt: 0,
+    lte: 100
+  }];
+  string page_token = 4;
+}
+
+// Response containing application details
+message ApplicationResponse {
+  Application application = 1;
+  repeated ValidationError validation_errors = 2;
+}
+
+// Response containing list of applications
+message ApplicationListResponse {
+  repeated Application applications = 1;
+  int32 total_count = 2;
+  string next_page_token = 3;
+}
+
+// Validation error details
+message ValidationError {
+  string field = 1;
+  string message = 2;
+  string code = 3;
+}
+
+// Service for managing enrollment applications
+service ApplicationService {
+  // Creates a new enrollment application
+  rpc CreateApplication(CreateApplicationRequest) returns (ApplicationResponse) {}
+
+  // Retrieves an application by ID
+  rpc GetApplication(GetApplicationRequest) returns (ApplicationResponse) {}
+
+  // Updates an existing application
+  rpc UpdateApplication(UpdateApplicationRequest) returns (ApplicationResponse) {}
+
+  // Submits an application for review
+  rpc SubmitApplication(SubmitApplicationRequest) returns (ApplicationResponse) {}
+
+  // Lists all applications for a user
+  rpc GetUserApplications(GetUserApplicationsRequest) returns (ApplicationListResponse) {}
+}
