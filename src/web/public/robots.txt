@@ -1,0 +1,51 @@
+# Enrollment System Robots Exclusion Protocol
+# Last Updated: 2024
+# Environment: Production
+# Specification: RFC 9309 Robots Exclusion Protocol
+# Encoding: UTF-8
+
+# Default rules for all crawlers
+User-agent: *
+Allow: /
+Allow: /login
+Allow: /register
+Disallow: /api/
+Disallow: /dashboard
+Disallow: /admin
+Disallow: /profile
+Disallow: /settings
+
+# Google crawler specific rules
+User-agent: Googlebot
+Crawl-delay: 10
+
+# Bing crawler specific rules
+User-agent: Bingbot
+Crawl-delay: 15
+
+# DuckDuckGo crawler specific rules
+User-agent: DuckDuckBot
+Crawl-delay: 20
+
+# Global directives
+Sitemap: https://${DOMAIN}/sitemap.xml
+Host: ${DOMAIN}
+
+# Clean URL parameters (tracking parameters to ignore)
+Clean-param: utm_source&utm_medium&utm_campaign&utm_term&utm_content /
+
+# Additional security measures
+Disallow: /api/*
+Disallow: /dashboard/*
+Disallow: /admin/*
+Disallow: /profile/*
+Disallow: /settings/*
+
+# Prevent access to sensitive file types and directories
+Disallow: /*.json$
+Disallow: /*.config$
+Disallow: /.env
+Disallow: /.git/
+Disallow: /node_modules/
+Disallow: /coverage/
+Disallow: /tests/
