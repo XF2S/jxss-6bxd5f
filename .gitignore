@@ -1,0 +1,184 @@
+# Comprehensive configuration for excluding files from version control
+
+###################
+# Node.js
+###################
+node_modules/
+npm-debug.log
+yarn-debug.log
+yarn-error.log
+.env
+.env.local
+.env.*.local
+.env.docker
+dist/
+build/
+coverage/
+.next/
+.webpack/
+.serverless/
+
+###################
+# Java
+###################
+target/
+*.class
+*.jar
+*.war
+.classpath
+.project
+.settings/
+.idea/
+*.iml
+*.iws
+.gradle/
+build/
+out/
+bin/
+generated-sources/
+
+###################
+# Python
+###################
+__pycache__/
+*.py[cod]
+*$py.class
+.Python
+env/
+venv/
+.env
+.venv
+pip-log.txt
+*.egg-info/
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+
+###################
+# IDE and Editors
+###################
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+.project
+.settings/
+*.sublime-workspace
+*.sublime-project
+
+###################
+# Build and Dependencies
+###################
+dist/
+build/
+out/
+.next/
+.nuxt/
+.cache/
+.parcel-cache/
+.terraform/
+*.tfstate
+*.tfstate.*
+.terraformrc
+terraform.rc
+
+###################
+# Testing and Coverage
+###################
+coverage/
+.nyc_output/
+junit.xml
+test-results/
+reports/
+.coverage
+coverage.xml
+nosetests.xml
+.pytest_cache/
+
+###################
+# Security and Credentials
+###################
+*.pem
+*.key
+*.crt
+*.cer
+*.p12
+*.pfx
+.aws/
+credentials
+*.decrypted.*
+*.encrypted.*
+.env*
+*.keystore
+*.jks
+
+###################
+# Local Development
+###################
+*.local
+local.properties
+*.local.yml
+*.local.yaml
+*.local.json
+*.local.js
+*.local.conf
+docker-compose.override.yml
+localdb/
+mockdata/
+.localstack/
+
+###################
+# Documentation
+###################
+docs/_build/
+site/
+.docusaurus/
+swagger-ui/
+api-docs/
+javadoc/
+sphinx-docs/_build/
+storybook-static/
+
+###################
+# Project Specific
+###################
+# Frontend build artifacts
+src/frontend/dist/
+src/frontend/.cache/
+
+# Backend service builds
+src/backend/packages/*/target/
+src/backend/packages/*/dist/
+src/backend/packages/*/__pycache__/
+
+# Infrastructure
+infrastructure/.terraform/
+infrastructure/cdk.out/
+infrastructure/terraform.tfstate*
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+*.temp
+*.bak
+
+# Logs
+logs/
+*.log
+log/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Editor directories and files
+.idea
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
