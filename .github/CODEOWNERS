@@ -1,0 +1,41 @@
+# Last matching pattern takes precedence
+
+# Global ownership - All files are owned by project leads and architecture team by default
+*                                               @project-leads @architecture-team
+
+# Backend Services
+src/backend/packages/api-gateway/**             @backend-team @security-team @api-team
+src/backend/packages/auth-service/**            @security-team @backend-team @auth-experts
+src/backend/packages/application-service/**     @backend-team @java-experts @domain-experts
+src/backend/packages/document-service/**        @backend-team @python-experts @storage-team
+src/backend/packages/notification-service/**    @backend-team @node-experts @messaging-team
+src/backend/packages/reporting-service/**       @backend-team @java-experts @analytics-team
+src/backend/packages/workflow-service/**        @backend-team @java-experts @process-team
+src/backend/packages/shared/**                  @backend-team @architecture-team @security-team
+
+# Frontend Application
+src/web/**                                      @frontend-team @accessibility-team @ux-team
+
+# Infrastructure and DevOps
+infrastructure/**                               @devops-team @security-team @cloud-experts
+infrastructure/kubernetes/**                    @devops-team @kubernetes-experts @sre-team
+infrastructure/monitoring/**                    @devops-team @sre-team @observability-team
+
+# CI/CD and GitHub Configurations
+.github/workflows/**                            @devops-team @ci-experts @security-team
+
+# API and Protocol Definitions
+**/*.proto                                      @architecture-team @api-team @backend-team
+
+# Security-Related Code
+**/security/**                                  @security-team @compliance-team
+
+# Test Files
+**/test/**                                      @qa-team @automation-team
+**/*.test.*                                     @qa-team @automation-team
+
+# Documentation
+docs/**                                         @documentation-team @technical-writers
+
+# Database Migrations
+**/database/migrations/**                       @database-team @backend-team @security-team
