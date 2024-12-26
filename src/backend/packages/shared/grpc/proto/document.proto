@@ -1,0 +1,201 @@
+syntax = "proto3";
+
+package enrollment.document;
+
+import "google/protobuf/timestamp.proto";  // v3.0.0
+import "google/protobuf/empty.proto";      // v3.0.0
+import "google/protobuf/wrappers.proto";   // v3.0.0
+import "./application.proto";
+
+option java_package = "com.enrollment.document.grpc";
+option java_multiple_files = true;
+option validate_all = true;
+
+// Document upload and verification status enums
+enum DocumentStatus {
+  DOCUMENT_STATUS_UNSPECIFIED = 0;
+  PENDING = 1;
+  UPLOADED = 2;
+  FAILED = 3;
+  DELETED = 4;
+}
+
+enum VerificationStatus {
+  VERIFICATION_STATUS_UNSPECIFIED = 0;
+  UNVERIFIED = 1;
+  VERIFIED = 2;
+  REJECTED = 3;
+}
+
+// Document metadata and content
+message Document {
+  string id = 1 [(validate.rules).string = {
+    uuid: true,
+    min_len: 36,
+    max_len: 36
+  }];
+  string application_id = 2 [(validate.rules).string = {
+    uuid: true,
+    min_len: 36,
+    max_len: 36
+  }];
+  string file_name = 3 [(validate.rules).string = {
+    min_len: 1,
+    max_len: 255,
+    pattern: "^[\\w\\-. ]+$"
+  }];
+  string mime_type = 4 [(validate.rules).string = {
+    min_len: 1,
+    max_len: 127
+  }];
+  string storage_path = 5;
+  int64 file_size = 6 [(validate.rules).int64 = {
+    gt: 0,
+    lte: 52428800  // 50MB max
+  }];
+  DocumentStatus status = 7;
+  VerificationStatus verification_status = 8;
+  google.protobuf.Timestamp uploaded_at = 9;
+  string checksum = 10;  // SHA-256 hash
+  string encryption_key_id = 11;  // AWS KMS key identifier
+}
+
+// Request to upload a new document
+message UploadDocumentRequest {
+  string application_id = 1 [(validate.rules).string = {
+    uuid: true,
+    min_len: 36,
+    max_len: 36
+  }];
+  string file_name = 2 [(validate.rules).string = {
+    min_len: 1,
+    max_len: 255,
+    pattern: "^[\\w\\-. ]+$"
+  }];
+  string mime_type = 3 [(validate.rules).string = {
+    min_len: 1,
+    max_len: 127
+  }];
+  bytes content = 4 [(validate.rules).bytes = {
+    min_len: 1,
+    max_len: 52428800  // 50MB max
+  }];
+}
+
+// Request to retrieve a document
+message GetDocumentRequest {
+  string id = 1 [(validate.rules).string = {
+    uuid: true,
+    min_len: 36,
+    max_len: 36
+  }];
+}
+
+// Request to delete a document
+message DeleteDocumentRequest {
+  string id = 1 [(validate.rules).string = {
+    uuid: true,
+    min_len: 36,
+    max_len: 36
+  }];
+  string reason = 2 [(validate.rules).string = {
+    min_len: 1,
+    max_len: 1000
+  }];
+}
+
+// Request to verify a document
+message VerifyDocumentRequest {
+  string id = 1 [(validate.rules).string = {
+    uuid: true,
+    min_len: 36,
+    max_len: 36
+  }];
+  VerificationStatus verification_status = 2;
+  string verifier_id = 3 [(validate.rules).string = {
+    uuid: true,
+    min_len: 36,
+    max_len: 36
+  }];
+  string notes = 4 [(validate.rules).string = {
+    max_len: 1000
+  }];
+}
+
+// Request to list documents for an application
+message ListApplicationDocumentsRequest {
+  string application_id = 1 [(validate.rules).string = {
+    uuid: true,
+    min_len: 36,
+    max_len: 36
+  }];
+  optional DocumentStatus status_filter = 2;
+  optional VerificationStatus verification_filter = 3;
+  int32 page_size = 4 [(validate.rules).int32 = {
+    gt: 0,
+    lte: 100
+  }];
+  string page_token = 5;
+}
+
+// Response containing document details with secure access URL
+message DocumentResponse {
+  Document document = 1;
+  string access_url = 2;  // Time-limited presigned URL
+  int32 url_expiry_seconds = 3;
+  repeated ValidationError validation_errors = 4;
+}
+
+// Response containing list of documents
+message DocumentListResponse {
+  repeated Document documents = 1;
+  int32 total_count = 2;
+  string next_page_token = 3;
+}
+
+// Validation error details
+message ValidationError {
+  string field = 1;
+  string message = 2;
+  string code = 3;
+}
+
+// Enhanced gRPC service for secure document management
+service DocumentService {
+  // Uploads a new document with enhanced security validation
+  rpc UploadDocument(UploadDocumentRequest) returns (DocumentResponse) {
+    option (google.api.http) = {
+      post: "/v1/documents"
+      body: "*"
+    };
+  }
+
+  // Securely retrieves document details with access control
+  rpc GetDocument(GetDocumentRequest) returns (DocumentResponse) {
+    option (google.api.http) = {
+      get: "/v1/documents/{id}"
+    };
+  }
+
+  // Securely deletes document with audit trail
+  rpc DeleteDocument(DeleteDocumentRequest) returns (google.protobuf.Empty) {
+    option (google.api.http) = {
+      delete: "/v1/documents/{id}"
+    };
+  }
+
+  // Updates document verification status with enhanced workflow
+  rpc VerifyDocument(VerifyDocumentRequest) returns (DocumentResponse) {
+    option (google.api.http) = {
+      post: "/v1/documents/{id}/verify"
+      body: "*"
+    };
+  }
+
+  // Lists documents with enhanced filtering and security
+  rpc ListApplicationDocuments(ListApplicationDocumentsRequest) returns (DocumentListResponse) {
+    option (google.api.http) = {
+      get: "/v1/applications/{application_id}/documents"
+    };
+  }
+}
