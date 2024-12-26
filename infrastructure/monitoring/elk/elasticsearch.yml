@@ -1,0 +1,157 @@
+# Elasticsearch Configuration v8.0+
+# Purpose: Core configuration for enrollment system's ELK stack monitoring infrastructure
+
+#----------------------- Cluster Configuration ------------------------
+cluster:
+  name: enrollment-system-logs
+  initial_master_nodes: 
+    - es01
+  routing:
+    allocation:
+      disk:
+        threshold_enabled: true
+        watermark:
+          low: "85%"
+          high: "90%"
+      awareness:
+        attributes: ["zone"]
+      enable: "all"
+      cluster_concurrent_rebalance: 2
+
+#----------------------- Node Configuration --------------------------
+node:
+  name: es01
+  master: true
+  data: true
+  ingest: true
+  max_local_storage_nodes: 1
+  attr:
+    zone: zone1
+  processors: 4
+
+#----------------------- Network Configuration ----------------------
+network:
+  host: 0.0.0.0
+  port: 9200
+  transport:
+    port: 9300
+    tcp:
+      compress: true
+      keep_alive: true
+      keep_idle: 60
+
+#----------------------- Security Configuration --------------------
+security:
+  enabled: true
+  ssl:
+    transport:
+      enabled: true
+      verification_mode: full
+      client_authentication: required
+      keystore:
+        path: /etc/elasticsearch/certs/elastic-certificates.p12
+      truststore:
+        path: /etc/elasticsearch/certs/elastic-certificates.p12
+    http:
+      enabled: true
+      verification_mode: full
+      client_authentication: optional
+      keystore:
+        path: /etc/elasticsearch/certs/elastic-certificates.p12
+      truststore:
+        path: /etc/elasticsearch/certs/elastic-certificates.p12
+  authc:
+    realms:
+      native:
+        type: native
+        order: 0
+        cache.ttl: 1h
+    token:
+      enabled: true
+      timeout: 30m
+  audit:
+    enabled: true
+
+#----------------------- X-Pack Features ---------------------------
+xpack:
+  security.enabled: true
+  monitoring:
+    enabled: true
+    collection.enabled: true
+  watcher.enabled: true
+  ml.enabled: true
+
+#----------------------- Path Configuration -----------------------
+path:
+  data: /var/lib/elasticsearch
+  logs: /var/log/elasticsearch
+
+#----------------------- Bootstrap Settings -----------------------
+bootstrap:
+  memory_lock: true
+  system_call_filter: true
+
+#----------------------- Discovery Configuration ------------------
+discovery:
+  seed_hosts: ["es01:9300"]
+  type: single-node
+  zen:
+    minimum_master_nodes: 1
+
+#----------------------- Indices Configuration -------------------
+indices:
+  memory:
+    index_buffer_size: "30%"
+  recovery:
+    max_bytes_per_sec: 40mb
+    max_concurrent_file_chunks: 2
+  lifecycle:
+    enabled: true
+    poll_interval: 10m
+
+#----------------------- Action Configuration --------------------
+action:
+  destructive_requires_name: true
+  auto_create_index: false
+
+#----------------------- JVM Configuration -----------------------
+# Recommended JVM heap size settings - 50% of available RAM, not exceeding 32GB
+# Configure in jvm.options file
+
+#----------------------- Additional Settings ---------------------
+# Thread pool settings for optimal performance
+thread_pool:
+  write:
+    size: 32
+    queue_size: 1000
+  search:
+    size: 16
+    queue_size: 1000
+
+# Cache settings for improved performance
+cache:
+  recycler:
+    page:
+      limit:
+        heap: 50%
+
+# Circuit breaker settings to prevent OOM
+breaker:
+  total:
+    limit: 70%
+  fielddata:
+    limit: 40%
+  request:
+    limit: 60%
+
+# Monitoring settings for system health
+monitor:
+  jvm:
+    gc:
+      enabled: true
+  fs:
+    enabled: true
+  os:
+    enabled: true
+  process:
+    enabled: true
