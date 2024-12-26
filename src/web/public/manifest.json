@@ -1,0 +1,145 @@
+{
+  "name": "Enrollment System",
+  "short_name": "Enrollment",
+  "description": "Modern web-based platform for educational enrollment management with comprehensive application processing and tracking capabilities",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#FFFFFF",
+  "theme_color": "#1976D2",
+  "orientation": "any",
+  "scope": "/",
+  "icons": [
+    {
+      "src": "favicon.ico",
+      "sizes": "64x64 32x32 24x24 16x16",
+      "type": "image/x-icon"
+    },
+    {
+      "src": "logo192.png",
+      "type": "image/png",
+      "sizes": "192x192",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "logo512.png",
+      "type": "image/png",
+      "sizes": "512x512",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "maskable_icon.png",
+      "sizes": "1024x1024",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "New Application",
+      "short_name": "Apply",
+      "description": "Start a new enrollment application",
+      "url": "/application/new",
+      "icons": [
+        {
+          "src": "icons/apply.png",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
+      "name": "Dashboard",
+      "short_name": "Dashboard",
+      "description": "View your enrollment dashboard",
+      "url": "/dashboard",
+      "icons": [
+        {
+          "src": "icons/dashboard.png",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
+      "name": "Document Upload",
+      "short_name": "Upload",
+      "description": "Upload enrollment documents",
+      "url": "/documents/upload",
+      "icons": [
+        {
+          "src": "icons/upload.png",
+          "sizes": "192x192"
+        }
+      ]
+    }
+  ],
+  "categories": [
+    "education",
+    "productivity",
+    "utilities"
+  ],
+  "prefer_related_applications": false,
+  "related_applications": [],
+  "screenshots": [
+    {
+      "src": "screenshots/dashboard_desktop.png",
+      "sizes": "1920x1080",
+      "type": "image/png",
+      "platform": "wide",
+      "label": "Dashboard View - Desktop"
+    },
+    {
+      "src": "screenshots/application_desktop.png",
+      "sizes": "1920x1080",
+      "type": "image/png",
+      "platform": "wide",
+      "label": "Application Form - Desktop"
+    },
+    {
+      "src": "screenshots/dashboard_mobile.png",
+      "sizes": "750x1334",
+      "type": "image/png",
+      "platform": "narrow",
+      "label": "Dashboard View - Mobile"
+    },
+    {
+      "src": "screenshots/application_mobile.png",
+      "sizes": "750x1334",
+      "type": "image/png",
+      "platform": "narrow",
+      "label": "Application Form - Mobile"
+    }
+  ],
+  "lang": "en-US",
+  "dir": "ltr",
+  "display_override": [
+    "standalone",
+    "minimal-ui",
+    "browser"
+  ],
+  "iarc_rating_id": "",
+  "protocol_handlers": [
+    {
+      "protocol": "web+enrollment",
+      "url": "/application?id=%s"
+    }
+  ],
+  "edge_side_panel": {
+    "preferred_width": 480
+  },
+  "share_target": {
+    "action": "/share-target",
+    "method": "POST",
+    "enctype": "multipart/form-data",
+    "params": {
+      "files": [
+        {
+          "name": "documents",
+          "accept": [
+            "application/pdf",
+            ".pdf",
+            "image/*"
+          ]
+        }
+      ]
+    }
+  }
+}
