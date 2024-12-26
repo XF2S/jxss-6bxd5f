@@ -1,0 +1,85 @@
+syntax = "proto3";
+
+package notification;
+
+option go_package = "./notification";
+
+import "google/protobuf/timestamp.proto";  // v3.0.0 - For delivery tracking timestamps
+import "google/protobuf/empty.proto";      // v3.0.0 - For void responses
+
+// Email request message containing recipient, template, and priority information
+message EmailRequest {
+    string to = 1;                // Recipient email address
+    string template_id = 2;       // Template identifier
+    bytes template_data = 3;      // Serialized template data
+    int32 priority = 4;          // Message priority level (1-5)
+}
+
+// Email response containing sending status and tracking information
+message EmailResponse {
+    bool success = 1;            // Whether the email was sent successfully
+    string message_id = 2;       // Unique message identifier
+    string error = 3;            // Error message if sending failed
+    bytes provider_response = 4;  // Raw provider response data
+}
+
+// Bulk email request for sending to multiple recipients
+message BulkEmailRequest {
+    repeated string recipients = 1;  // List of recipient email addresses
+    string template_id = 2;         // Template identifier
+    bytes template_data = 3;        // Serialized template data
+    int32 batch_size = 4;          // Number of emails per batch
+}
+
+// Bulk email response with batch processing results
+message BulkEmailResponse {
+    int32 success_count = 1;       // Number of successfully sent emails
+    int32 failed_count = 2;        // Number of failed email sends
+    repeated string errors = 3;     // List of error messages
+    bytes batch_details = 4;        // Detailed batch processing information
+}
+
+// SMS request with template support and international formatting
+message SMSRequest {
+    string phone_number = 1;       // Recipient phone number (E.164 format)
+    string message = 2;            // Message content
+    string template_id = 3;        // Optional template identifier
+    bytes template_data = 4;       // Optional template data
+}
+
+// SMS response with provider-specific details
+message SMSResponse {
+    bool success = 1;              // Whether the SMS was sent successfully
+    string message_sid = 2;        // Provider-specific message identifier
+    string error = 3;              // Error message if sending failed
+    bytes provider_details = 4;    // Additional provider-specific details
+}
+
+// Request to check message delivery status
+message DeliveryStatusRequest {
+    string message_id = 1;         // Message identifier to check
+    bool include_history = 2;      // Whether to include delivery history
+}
+
+// Response containing comprehensive delivery status
+message DeliveryStatusResponse {
+    string status = 1;             // Current delivery status
+    google.protobuf.Timestamp timestamp = 2;  // Last status update timestamp
+    string error = 3;              // Error message if status check failed
+    bytes delivery_history = 4;    // Detailed delivery history if requested
+}
+
+// Notification service for handling emails, SMS, and delivery tracking
+service NotificationService {
+    // Sends an email using specified template
+    rpc sendEmail(EmailRequest) returns (EmailResponse) {}
+    
+    // Sends bulk emails with batch processing
+    rpc sendBulkEmails(BulkEmailRequest) returns (BulkEmailResponse) {}
+    
+    // Sends SMS message with template support
+    rpc sendSMS(SMSRequest) returns (SMSResponse) {}
+    
+    // Checks delivery status of sent message
+    rpc checkDeliveryStatus(DeliveryStatusRequest) returns (DeliveryStatusResponse) {}
+}
